@@ -7,45 +7,71 @@ export default function LoginPage() {
   const [error, formAction, pending] = useActionState(login, undefined);
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-background">
-      <form
-        action={formAction}
-        className="w-full max-w-sm rounded-card bg-card p-8 shadow-card"
-      >
-        <h1 className="text-xl font-semibold text-ink">NWG Coaches Hub</h1>
+    <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-background">
+      <div className="pointer-events-none absolute -left-[220px] -top-[220px] h-[600px] w-[600px] rounded-full bg-orange opacity-[0.06]" />
+      <div className="pointer-events-none absolute -bottom-[200px] -right-[180px] h-[500px] w-[500px] rounded-full bg-slate opacity-[0.06]" />
 
-        <label className="mt-6 block text-sm font-medium text-slate-dark">
-          Email
-          <input
-            type="email"
-            name="email"
-            required
-            className="mt-1 w-full rounded-md border border-line px-3 py-2 text-ink"
-          />
-        </label>
+      <div className="relative w-full max-w-[380px] rounded-card bg-white p-9 pb-9 pt-11 shadow-[0_20px_50px_rgba(46,51,57,0.12)]">
+        <div className="mb-2 text-center text-[26px] font-extrabold leading-[1.25] tracking-[0.2px]">
+          <span className="text-orange">NWG</span> <span className="text-slate-dark">Coaches Hub</span>
+        </div>
+        <div className="mb-8 text-center text-sm text-slate-light">
+          Sign in to manage your locations
+        </div>
 
-        <label className="mt-4 block text-sm font-medium text-slate-dark">
-          Password
-          <input
-            type="password"
-            name="password"
-            required
-            className="mt-1 w-full rounded-md border border-line px-3 py-2 text-ink"
-          />
-        </label>
+        <form action={formAction} className="flex flex-col gap-[18px]">
+          <div>
+            <label htmlFor="email" className="mb-1.5 block text-[13px] font-semibold text-slate-dark">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              autoComplete="username"
+              required
+              className="w-full rounded-lg border border-line bg-[#FAFBFC] px-3.5 py-3 text-sm text-ink transition-colors focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-orange/15 focus:border-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
+            />
+          </div>
 
-        {error && (
-          <p className="mt-4 text-sm text-status-amber">{error}</p>
-        )}
+          <div>
+            <label htmlFor="password" className="mb-1.5 block text-[13px] font-semibold text-slate-dark">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              className="w-full rounded-lg border border-line bg-[#FAFBFC] px-3.5 py-3 text-sm text-ink transition-colors focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-orange/15 focus:border-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="mt-6 w-full rounded-md bg-orange py-2 font-medium text-white hover:bg-orange-dark disabled:opacity-60"
-        >
-          {pending ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
+          {error && (
+            <p className="rounded-lg bg-[#FCF3DD] px-3.5 py-2.5 text-[13px] font-medium text-status-amber">
+              {error}
+            </p>
+          )}
+
+          <label className="flex items-center gap-1.5 text-[13px] text-slate-dark">
+            <input type="checkbox" name="remember" className="accent-orange" />
+            Remember me
+          </label>
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="mt-1.5 rounded-lg bg-orange py-[13px] text-[15px] font-bold text-white transition-colors hover:bg-orange-dark active:translate-y-px disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
+          >
+            {pending ? "Logging in…" : "Log In"}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-xs text-slate-light">
+          © 2026 The Gymnastics Blueprint. All rights reserved.
+        </div>
+      </div>
     </main>
   );
 }
