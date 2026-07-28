@@ -15,13 +15,13 @@ type Profile = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-slate-light focus:border-orange focus:outline-none";
+  "w-full rounded-lg border border-line bg-white px-2.5 py-1.5 text-sm text-ink placeholder:text-slate-light focus:border-orange focus:outline-none";
 const labelClass = "mb-1.5 block text-[12.5px] font-semibold text-slate-dark";
 const primaryButtonClass =
-  "rounded-lg bg-orange px-4 py-2.5 text-[13.5px] font-bold text-white hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60";
+  "rounded-lg bg-orange px-3.5 py-2 text-[13px] font-bold text-white hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60";
 const secondaryButtonClass =
-  "rounded-lg border border-line bg-white px-4 py-2.5 text-[13.5px] font-bold text-slate-dark hover:bg-background";
-const rowActionClass = "rounded-md border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-dark hover:bg-background disabled:cursor-not-allowed disabled:opacity-60";
+  "rounded-lg border border-line bg-white px-3.5 py-2 text-[13px] font-bold text-slate-dark hover:bg-background";
+const rowActionClass = "rounded-md border border-line bg-white px-2 py-1 text-xs font-semibold text-slate-dark hover:bg-background disabled:cursor-not-allowed disabled:opacity-60";
 
 function StatusPill({ active }: { active: boolean }) {
   return (

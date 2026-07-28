@@ -30,7 +30,7 @@ export default function LoginPage() {
               name="email"
               autoComplete="username"
               required
-              className="w-full rounded-lg border border-line bg-[#FAFBFC] px-3.5 py-3 text-sm text-ink transition-colors focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-orange/15 focus:border-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
+              className="w-full rounded-lg border border-line bg-[#FAFBFC] px-3 py-2.5 text-sm text-ink transition-colors focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-orange/15 focus:border-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
             />
           </div>
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
               name="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-line bg-[#FAFBFC] px-3.5 py-3 text-sm text-ink transition-colors focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-orange/15 focus:border-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
+              className="w-full rounded-lg border border-line bg-[#FAFBFC] px-3 py-2.5 text-sm text-ink transition-colors focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-orange/15 focus:border-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
             />
           </div>
 
@@ -62,7 +62,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="mt-1.5 rounded-lg bg-orange py-[13px] text-[15px] font-bold text-white transition-colors hover:bg-orange-dark active:translate-y-px disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
+            className="mt-1.5 rounded-lg bg-orange py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-dark active:translate-y-px disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-dark"
           >
             {pending ? "Logging in…" : "Log In"}
           </button>

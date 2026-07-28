@@ -130,6 +130,24 @@ hardcoded placeholder content — no database tables, no fetching, just static m
 - Wordmark: text only ("NWG Coaches Hub"), ~20px, no logo icon
 - Desktop-first; usable but not optimised for mobile
 
+### Sizing tokens — buttons & inputs (density pass, 2026-07-29)
+Applies to all `<button>`/`<input>`/`<select>` elements — login form, nav bar, and
+UsersTable (table + modals). Not applied to nav tabs, pills/badges, or banner/message
+text, which aren't form controls.
+
+| Element | Padding | Font size |
+|---|---|---|
+| Standard button (primary/secondary, e.g. Report a concern, Add user, Save changes) | `px-3.5 py-2` | `text-[13px]` |
+| Login submit button | `py-2.5` (full width) | `text-sm` |
+| Table row action button (Edit / Reset password / Deactivate) | `px-2 py-1` | `text-xs` |
+| Text input / select (modals) | `px-2.5 py-1.5` | `text-sm` |
+| Login email/password inputs | `px-3 py-2.5` | `text-sm` |
+| Nav bar search input | `py-2 pl-9 pr-3.5` | `text-sm` |
+
+These are one notch down from the original v1 mock sizing (e.g. standard buttons were
+`px-4 py-2.5 text-[13.5px]`; modal inputs were `px-3 py-2`). Use these values for any
+new button or input rather than the larger originals.
+
 ## Supabase
 - Project URL: `https://wwizreekicrjqwwptdmx.supabase.co`
 - Publishable key: `sb_publishable_m_sRPnqR2n6ScIealVT_Iw_QGLwu6y8`
