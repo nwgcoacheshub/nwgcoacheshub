@@ -28,6 +28,14 @@ import {
 export type Category = { key: string; label: string; color_hex: string };
 export type Coach = { id: string; name: string };
 
+export type CatalogueItem = {
+  id: string;
+  title: string;
+  category_key: string;
+  default_meta: string | null;
+  default_duration_mins: number;
+};
+
 export type RosterRow = {
   id: string;
   day_of_week: number;
@@ -46,6 +54,7 @@ export type ClassRow = {
   day_of_week: number;
   coach_id: string;
   set_coach_id: string | null;
+  class_catalogue_id: string | null;
   title: string;
   category_key: string;
   meta: string | null;
@@ -67,6 +76,9 @@ type PopoverState = { day: number; coachId: string; top: number; left: number };
 
 type ModalState = {
   editingId: string | null;
+  // "" = nothing picked yet, CUSTOM_CLASS = free-text title, otherwise a
+  // rota_class_catalogue id.
+  catalogueId: string;
   title: string;
   meta: string;
   categoryKey: string;
@@ -76,6 +88,9 @@ type ModalState = {
   startMins: number;
   durationMins: number;
 };
+
+/** Sentinel for the picker's "custom class" escape hatch. */
+const CUSTOM_CLASS = "__custom__";
 
 const TIME_LABELS: number[] = [];
 for (let m = DAY_START; m <= DAY_START + SLOTS * SLOT_MIN; m += 60) {
@@ -88,6 +103,7 @@ export default function StandardRotaBoard({
   siteId,
   siteName,
   categories,
+  catalogue,
   initialCoaches,
   initialRoster,
   initialClasses,
@@ -95,6 +111,7 @@ export default function StandardRotaBoard({
   siteId: string;
   siteName: string;
   categories: Category[];
+  catalogue: CatalogueItem[];
   initialCoaches: Coach[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
@@ -119,6 +136,7 @@ export default function StandardRotaBoard({
   const [modal, setModal] = useState<ModalState | null>(null);
   const grabOffsetY = useRef(0);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const catalogueSelectRef = useRef<HTMLSelectElement | null>(null);
 
   const { coaches, roster, classes } = data;
 
@@ -231,9 +249,14 @@ export default function StandardRotaBoard({
     return () => document.removeEventListener("click", onDocClick);
   }, [popover]);
 
+  // Keyed on the mode rather than the whole modal object, so focus lands once
+  // when the modal opens or switches to custom entry — not on every keystroke.
+  const modalMode =
+    modal === null ? null : modal.catalogueId === CUSTOM_CLASS ? "custom" : "catalogue";
   useEffect(() => {
-    if (modal) titleInputRef.current?.focus();
-  }, [modal]);
+    if (modalMode === "custom") titleInputRef.current?.focus();
+    else if (modalMode === "catalogue") catalogueSelectRef.current?.focus();
+  }, [modalMode]);
 
   /* ---------------- Mutations ---------------- */
 
@@ -513,6 +536,10 @@ export default function StandardRotaBoard({
 
   function saveModal() {
     if (!modal) return;
+    if (!modal.catalogueId) {
+      setError("Choose a class from the catalogue, or pick “+ Custom class…”.");
+      return;
+    }
     const title = modal.title.trim();
     if (!title) {
       titleInputRef.current?.focus();
@@ -530,6 +557,7 @@ export default function StandardRotaBoard({
       day_of_week: modal.day,
       coach_id: modal.coachId,
       set_coach_id: modal.setCoachId || null,
+      class_catalogue_id: modal.catalogueId === CUSTOM_CLASS ? null : modal.catalogueId,
       title,
       category_key: modal.categoryKey,
       meta: modal.meta.trim() || null,
@@ -572,6 +600,7 @@ export default function StandardRotaBoard({
     const day = 0;
     setModal({
       editingId: null,
+      catalogueId: "", // catalogue picker, nothing chosen yet
       title: "",
       meta: "",
       categoryKey: categories[0]?.key ?? "",
@@ -586,6 +615,9 @@ export default function StandardRotaBoard({
   function openEditModal(ev: ClassRow) {
     setModal({
       editingId: ev.id,
+      // Show the catalogue item it came from. A class with no link — or one
+      // whose catalogue entry has since been retired — edits as a custom class.
+      catalogueId: ev.class_catalogue_id ?? CUSTOM_CLASS,
       title: ev.title,
       meta: ev.meta ?? "",
       categoryKey: ev.category_key,
@@ -595,6 +627,27 @@ export default function StandardRotaBoard({
       startMins: ev.start_mins,
       durationMins: ev.duration_mins,
     });
+  }
+
+  /** Applying a catalogue pick: fills the fields in, but nothing is locked. */
+  function selectCatalogueItem(current: ModalState, catalogueId: string): ModalState {
+    if (catalogueId === CUSTOM_CLASS) {
+      // Clear the title that came from the catalogue so they type their own.
+      // Category, duration and meta stay as they are, to be edited by hand.
+      return { ...current, catalogueId, title: "" };
+    }
+    const item = catalogue.find((c) => c.id === catalogueId);
+    if (!item) return { ...current, catalogueId };
+    return {
+      ...current,
+      catalogueId,
+      title: item.title,
+      categoryKey: item.category_key,
+      durationMins: item.default_duration_mins,
+      // Only overwrite details when the catalogue row actually has some, so
+      // switching between items doesn't wipe what the user typed.
+      meta: item.default_meta?.trim() ? item.default_meta : current.meta,
+    };
   }
 
   /* ---------------- Drag & drop ---------------- */
@@ -642,6 +695,15 @@ export default function StandardRotaBoard({
     : undefined;
 
   const modalDayCoaches = modal ? rosterByDay[modal.day] : [];
+  // A class can point at a catalogue entry that's since been deactivated. Keep
+  // showing it so editing the class doesn't silently drop the link.
+  const retiredCatalogueId =
+    modal &&
+    modal.catalogueId !== "" &&
+    modal.catalogueId !== CUSTOM_CLASS &&
+    !catalogue.some((c) => c.id === modal.catalogueId)
+      ? modal.catalogueId
+      : null;
 
   return (
     <div className={styles.root}>
@@ -1009,16 +1071,47 @@ export default function StandardRotaBoard({
             <h2>{modal.editingId ? "Edit class" : "Add class"}</h2>
 
             <div className="field">
-              <label htmlFor="f-title">Class name</label>
-              <input
-                id="f-title"
-                ref={titleInputRef}
-                type="text"
-                placeholder="e.g. Ruby Squad (7-10)"
-                value={modal.title}
-                onChange={(e) => setModal({ ...modal, title: e.target.value })}
-              />
+              <label htmlFor="f-catalogue">Class name</label>
+              <select
+                id="f-catalogue"
+                ref={catalogueSelectRef}
+                value={modal.catalogueId}
+                onChange={(e) => setModal(selectCatalogueItem(modal, e.target.value))}
+              >
+                <option value="">Choose a class…</option>
+                {catalogue.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+                {retiredCatalogueId && (
+                  <option value={retiredCatalogueId}>
+                    {modal.title} (no longer in catalogue)
+                  </option>
+                )}
+                <option value={CUSTOM_CLASS}>+ Custom class…</option>
+              </select>
+              {modal.catalogueId !== CUSTOM_CLASS && (
+                <div className="field-hint">
+                  Pulls in the category, duration and details — all still editable
+                  below.
+                </div>
+              )}
             </div>
+
+            {modal.catalogueId === CUSTOM_CLASS && (
+              <div className="field">
+                <label htmlFor="f-title">Custom class name</label>
+                <input
+                  id="f-title"
+                  ref={titleInputRef}
+                  type="text"
+                  placeholder="e.g. Ruby Squad (7-10)"
+                  value={modal.title}
+                  onChange={(e) => setModal({ ...modal, title: e.target.value })}
+                />
+              </div>
+            )}
 
             <div className="field">
               <label htmlFor="f-meta">Details (ages / capacity)</label>
