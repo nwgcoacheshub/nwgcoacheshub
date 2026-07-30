@@ -46,6 +46,7 @@ export default function StandardRotaView({
       initialCoaches={initialCoaches}
       initialRoster={initialRoster}
       initialClasses={initialClasses}
+      canManageCoaches
     />
   );
 }

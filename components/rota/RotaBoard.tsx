@@ -25,9 +25,10 @@ import {
   type CoachStatus,
 } from "@/lib/rota/board";
 import type { RotaDataSource } from "@/lib/rota/rotaDataSource";
+import ManageCoachesModal from "./ManageCoachesModal";
 
 export type Category = { key: string; label: string; color_hex: string };
-export type Coach = { id: string; name: string };
+export type Coach = { id: string; name: string; active: boolean };
 
 export type CatalogueItem = {
   id: string;
@@ -75,6 +76,8 @@ type DragPayload =
 
 type PopoverState = { day: number; coachId: string; top: number; left: number };
 
+type CoachPickerState = { day: number; top: number; left: number };
+
 type ModalState = {
   editingId: string | null;
   // "" = nothing picked yet, CUSTOM_CLASS = free-text title, otherwise a
@@ -116,6 +119,7 @@ export default function RotaBoard({
   initialRoster,
   initialClasses,
   toolbarExtra,
+  canManageCoaches = false,
 }: {
   dataSource: RotaDataSource;
   /** What this board is showing, for the empty note — a site or a week. */
@@ -128,6 +132,13 @@ export default function RotaBoard({
   initialClasses: ClassRow[];
   /** Extra toolbar control, e.g. the week board's regenerate action. */
   toolbarExtra?: React.ReactNode;
+  /**
+   * Shows the "Manage coaches" entry point. Only true on the Standard Rota:
+   * its deactivate-confirmation step checks which days a coach appears on in
+   * `roster`, which is only the site's Standard Rota when this board is bound
+   * to the standard data source.
+   */
+  canManageCoaches?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -146,6 +157,9 @@ export default function RotaBoard({
 
   const [error, setError] = useState<string | null>(null);
   const [popover, setPopover] = useState<PopoverState | null>(null);
+  const [coachPicker, setCoachPicker] = useState<CoachPickerState | null>(null);
+  const [newCoachName, setNewCoachName] = useState("");
+  const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
   const [modal, setModal] = useState<ModalState | null>(null);
   const grabOffsetY = useRef(0);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
@@ -176,6 +190,24 @@ export default function RotaBoard({
     for (const c of coaches) map.set(c.id, c);
     return map;
   }, [coaches]);
+
+  // Deactivated coaches stay in `coaches` (and coachById above) so their name
+  // still resolves wherever their historical roster/class rows are shown —
+  // they just drop out of both add-coach pickers.
+  const activeCoaches = useMemo(() => coaches.filter((c) => c.active), [coaches]);
+
+  // Which days (0=Mon..6=Sun) each coach appears on in `roster`. Only
+  // meaningful as "the Standard Rota" when canManageCoaches is true — see the
+  // prop doc above.
+  const standardDaysByCoach = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (const r of roster) {
+      const list = map.get(r.coach_id) ?? [];
+      list.push(r.day_of_week);
+      map.set(r.coach_id, list);
+    }
+    return map;
+  }, [roster]);
 
   const categoryByKey = useMemo(() => {
     const map = new Map<string, Category>();
@@ -252,15 +284,18 @@ export default function RotaBoard({
     return { cols, coachCols, lanesByCoach, dayCols };
   }, [rosterByDay, classes]);
 
-  // Close the coach popover on any outside click, as the mock did.
+  // Close the coach popover on any outside click, as the mock did. The
+  // add-coach picker is the same kind of transient popover, so it shares the
+  // effect.
   useEffect(() => {
-    if (!popover) return;
+    if (!popover && !coachPicker) return;
     function onDocClick() {
       setPopover(null);
+      setCoachPicker(null);
     }
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);
-  }, [popover]);
+  }, [popover, coachPicker]);
 
   // Keyed on the mode rather than the whole modal object, so focus lands once
   // when the modal opens or switches to custom entry — not on every keystroke.
@@ -396,33 +431,27 @@ export default function RotaBoard({
     );
   }
 
-  async function addCoachToDay(day: number) {
-    const typed = window.prompt("Add coach to " + DAY_NAMES[day] + ":");
-    const name = typed?.trim();
-    if (!name) return;
+  function openCoachPicker(day: number, e: React.MouseEvent) {
+    e.stopPropagation();
+    setPopover(null);
+    setNewCoachName("");
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCoachPicker({
+      day,
+      top: rect.bottom + 6,
+      left: Math.min(rect.left, window.innerWidth - 232),
+    });
+  }
 
+  function nextRosterRow(day: number, coachId: string): RosterRow {
     const current = dataRef.current;
-    const existing = current.coaches.find(
-      (c) => c.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (
-      existing &&
-      current.roster.some((r) => r.day_of_week === day && r.coach_id === existing.id)
-    ) {
-      setError(`${existing.name} is already on ${DAY_NAMES[day]}.`);
-      return;
-    }
-
-    const coach: Coach = existing ?? { id: crypto.randomUUID(), name };
     const maxSort = current.roster
       .filter((r) => r.day_of_week === day)
       .reduce((max, r) => Math.max(max, r.sort_order), -1);
-
-    const newRow: RosterRow = {
+    return {
       id: crypto.randomUUID(),
       day_of_week: day,
-      coach_id: coach.id,
+      coach_id: coachId,
       sort_order: maxSort + 1,
       shift_start_mins: DAY_START,
       shift_end_mins: DAY_START + SLOTS * SLOT_MIN,
@@ -431,22 +460,56 @@ export default function RotaBoard({
       is_lead: false,
       is_cashing_up: false,
     };
+  }
+
+  /** Adds a coach already in the site's directory to a day's roster. */
+  function addExistingCoachToDay(day: number, coachId: string) {
+    const current = dataRef.current;
+    if (current.roster.some((r) => r.day_of_week === day && r.coach_id === coachId)) {
+      setError(`${coachName(coachId)} is already on ${DAY_NAMES[day]}.`);
+      return;
+    }
+
+    const newRow = nextRosterRow(day, coachId);
+    const next: BoardData = { ...current, roster: [...current.roster, newRow] };
+
+    setCoachPicker(null);
+    commit(next, () =>
+      dataSource.insertRoster({
+        id: newRow.id,
+        day_of_week: day,
+        coach_id: coachId,
+        sort_order: newRow.sort_order,
+        shift_start_mins: newRow.shift_start_mins,
+        shift_end_mins: newRow.shift_end_mins,
+      })
+    );
+  }
+
+  /** The picker's inline escape hatch: create a brand-new coach and add them in one step. */
+  async function createCoachAndAddToDay(day: number, rawName: string) {
+    const name = rawName.trim();
+    if (!name) return;
+
+    const current = dataRef.current;
+    const coach: Coach = { id: crypto.randomUUID(), name, active: true };
+    const newRow = nextRosterRow(day, coach.id);
 
     const next: BoardData = {
       ...current,
-      coaches: existing ? current.coaches : [...current.coaches, coach],
+      coaches: [...current.coaches, coach],
       roster: [...current.roster, newRow],
     };
 
+    setCoachPicker(null);
+    setNewCoachName("");
     await commit(next, async () => {
       // rota_coaches is shared by the standard rota and every week, so it's
       // keyed on the site in both modes rather than going via the data source.
-      if (!existing) {
-        const { error: coachError } = await supabase
-          .from("rota_coaches")
-          .insert({ id: coach.id, site_id: siteId, name: coach.name });
-        if (coachError) return { error: coachError };
-      }
+      const { error: coachError } = await supabase
+        .from("rota_coaches")
+        .insert({ id: coach.id, site_id: siteId, name: coach.name });
+      if (coachError) return { error: coachError };
       return dataSource.insertRoster({
         id: newRow.id,
         day_of_week: day,
@@ -456,6 +519,74 @@ export default function RotaBoard({
         shift_end_mins: newRow.shift_end_mins,
       });
     });
+  }
+
+  /**
+   * Coach directory CRUD for the "Manage coaches" view. These write straight
+   * to rota_coaches rather than through `commit` — unlike roster/class edits
+   * they aren't scoped to this board's data source (rota_coaches is
+   * site-scoped in both standard and weekly mode), so each rolls its own
+   * `coaches` state back on failure and reports its error to the caller
+   * instead of the board-level error banner.
+   */
+  async function addCoach(name: string): Promise<{ error: string | null }> {
+    const trimmed = name.trim();
+    if (!trimmed) return { error: "Enter a name." };
+
+    const coach: Coach = { id: crypto.randomUUID(), name: trimmed, active: true };
+    const prev = dataRef.current;
+    applyData({ ...prev, coaches: [...prev.coaches, coach] });
+
+    const { error } = await supabase
+      .from("rota_coaches")
+      .insert({ id: coach.id, site_id: siteId, name: coach.name });
+    if (error) {
+      applyData(prev);
+      return { error: error.message };
+    }
+    return { error: null };
+  }
+
+  async function renameCoach(
+    coachId: string,
+    name: string
+  ): Promise<{ error: string | null }> {
+    const trimmed = name.trim();
+    if (!trimmed) return { error: "Enter a name." };
+
+    const prev = dataRef.current;
+    applyData({
+      ...prev,
+      coaches: prev.coaches.map((c) => (c.id === coachId ? { ...c, name: trimmed } : c)),
+    });
+
+    const { error } = await supabase
+      .from("rota_coaches")
+      .update({ name: trimmed })
+      .eq("id", coachId);
+    if (error) {
+      applyData(prev);
+      return { error: error.message };
+    }
+    return { error: null };
+  }
+
+  async function deactivateCoach(coachId: string): Promise<{ error: string | null }> {
+    const prev = dataRef.current;
+    applyData({
+      ...prev,
+      coaches: prev.coaches.map((c) => (c.id === coachId ? { ...c, active: false } : c)),
+    });
+
+    const { error } = await supabase
+      .from("rota_coaches")
+      .update({ active: false })
+      .eq("id", coachId);
+    if (error) {
+      applyData(prev);
+      return { error: error.message };
+    }
+    return { error: null };
   }
 
   async function removeCoachFromDay(day: number, coachId: string) {
@@ -659,6 +790,12 @@ export default function RotaBoard({
       )
     : undefined;
 
+  const coachPickerAvailable = coachPicker
+    ? activeCoaches.filter(
+        (c) => !roster.some((r) => r.day_of_week === coachPicker.day && r.coach_id === c.id)
+      )
+    : [];
+
   const modalDayCoaches = modal ? rosterByDay[modal.day] : [];
   // A class can point at a catalogue entry that's since been deactivated. Keep
   // showing it so editing the class doesn't silently drop the link.
@@ -680,6 +817,15 @@ export default function RotaBoard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {toolbarExtra}
+          {canManageCoaches && (
+            <button
+              className="btn btn-ghost"
+              style={{ border: "1px solid var(--line)" }}
+              onClick={() => setManageCoachesOpen(true)}
+            >
+              Manage coaches
+            </button>
+          )}
           <button className="add-btn" onClick={openAddModal}>
             + Add class
           </button>
@@ -713,7 +859,10 @@ export default function RotaBoard({
                     <span className="dname">{dayName}</span>
                   </div>
                   <div className="day-head-actions">
-                    <button className="add-coach-btn" onClick={() => addCoachToDay(d)}>
+                    <button
+                      className="add-coach-btn"
+                      onClick={(e) => openCoachPicker(d, e)}
+                    >
                       + coach
                     </button>
                   </div>
@@ -1026,6 +1175,71 @@ export default function RotaBoard({
             🔑 Key holder
           </label>
         </div>
+      )}
+
+      {coachPicker && (
+        <div
+          className="coach-popover"
+          style={{ top: coachPicker.top, left: coachPicker.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h4>Add coach — {DAY_NAMES[coachPicker.day]}</h4>
+          {coachPickerAvailable.length === 0 ? (
+            <div className="picker-empty">
+              {activeCoaches.length === 0
+                ? "No coaches yet — add one below."
+                : "Everyone active is already on this day."}
+            </div>
+          ) : (
+            coachPickerAvailable.map((c) => (
+              <button
+                type="button"
+                key={c.id}
+                className="opt"
+                onClick={() => addExistingCoachToDay(coachPicker.day, c.id)}
+              >
+                {c.name}
+              </button>
+            ))
+          )}
+          <hr />
+          {/* A plain button rather than a <form onSubmit> — submitting a form
+              whose own handler unmounts it (via setCoachPicker(null)) races
+              the browser's native submission and silently drops the create. */}
+          <div className="picker-form">
+            <input
+              type="text"
+              placeholder="New coach name"
+              value={newCoachName}
+              onChange={(e) => setNewCoachName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  createCoachAndAddToDay(coachPicker.day, newCoachName);
+                }
+              }}
+              autoFocus
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => createCoachAndAddToDay(coachPicker.day, newCoachName)}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {manageCoachesOpen && canManageCoaches && (
+        <ManageCoachesModal
+          coaches={activeCoaches}
+          daysByCoach={standardDaysByCoach}
+          onAdd={addCoach}
+          onRename={renameCoach}
+          onDeactivate={deactivateCoach}
+          onClose={() => setManageCoachesOpen(false)}
+        />
       )}
 
       {modal && (

@@ -48,7 +48,7 @@ export default async function RotaSitePage({
         .order("sort_order"),
       supabase
         .from("rota_coaches")
-        .select("id, name")
+        .select("id, name, active")
         .eq("site_id", site.id)
         .order("name"),
       supabase
