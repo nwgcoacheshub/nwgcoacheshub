@@ -3,13 +3,15 @@ import { createClient } from "@/lib/supabaseServer";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
-import StandardRotaBoard, {
+import RotaViewTabs from "@/components/rota/RotaViewTabs";
+import StandardRotaView from "@/components/rota/StandardRotaView";
+import {
   type CatalogueItem,
   type Category,
   type ClassRow,
   type Coach,
   type RosterRow,
-} from "@/components/rota/StandardRotaBoard";
+} from "@/components/rota/RotaBoard";
 
 export default async function RotaSitePage({
   params,
@@ -77,6 +79,7 @@ export default async function RotaSitePage({
             currentSlug={site.slug}
             canSwitch={access.canSwitch}
           />
+          <RotaViewTabs siteSlug={site.slug} active="standard" />
         </div>
         <div className="text-[13px] text-slate-light">
           Home / <b className="font-bold text-orange">Rota</b>
@@ -88,7 +91,7 @@ export default async function RotaSitePage({
 
       {/* Keyed on the site so switching remounts the board with fresh state —
           without this, React would keep the previous site's rows in useState. */}
-      <StandardRotaBoard
+      <StandardRotaView
         key={site.id}
         siteId={site.id}
         siteName={site.name}

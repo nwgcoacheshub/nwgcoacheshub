@@ -445,6 +445,15 @@
   margin: 0 0 14px;
   color: var(--ink);
 }
+/* Body copy in a confirmation modal. The class modal is all fields, so no
+   existing rule covered a plain paragraph. */
+.root :global(.modal p) {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .root :global(.field) {
   margin-bottom: 12px;
 }
@@ -514,6 +523,20 @@
 }
 .root :global(.btn-danger:hover) {
   text-decoration: underline;
+}
+
+/* Generate/regenerate hold their buttons disabled while the write is in
+   flight, so both button families need a disabled state. */
+.root :global(.btn:disabled),
+.root :global(.add-btn:disabled) {
+  opacity: 0.6;
+  cursor: default;
+}
+.root :global(.btn-danger:disabled:hover) {
+  text-decoration: none;
+}
+.root :global(.add-btn:disabled:hover) {
+  background: var(--brand);
 }
 
 .root :global(.add-btn) {

@@ -24,6 +24,7 @@ import {
   topPx,
   type CoachStatus,
 } from "@/lib/rota/board";
+import type { RotaDataSource } from "@/lib/rota/rotaDataSource";
 
 export type Category = { key: string; label: string; color_hex: string };
 export type Coach = { id: string; name: string };
@@ -99,22 +100,34 @@ for (let m = DAY_START; m <= DAY_START + SLOTS * SLOT_MIN; m += 60) {
 
 const START_OPTIONS = startOptions();
 
-export default function StandardRotaBoard({
+/**
+ * The rota grid. Identical for the Standard Rota and for a generated week —
+ * the only difference is the `dataSource` it writes through, so nothing in here
+ * names a table. `siteId` is still needed directly because rota_coaches is
+ * site-scoped in both modes.
+ */
+export default function RotaBoard({
+  dataSource,
+  scopeLabel,
   siteId,
-  siteName,
   categories,
   catalogue,
   initialCoaches,
   initialRoster,
   initialClasses,
+  toolbarExtra,
 }: {
+  dataSource: RotaDataSource;
+  /** What this board is showing, for the empty note — a site or a week. */
+  scopeLabel: string;
   siteId: string;
-  siteName: string;
   categories: Category[];
   catalogue: CatalogueItem[];
   initialCoaches: Coach[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
+  /** Extra toolbar control, e.g. the week board's regenerate action. */
+  toolbarExtra?: React.ReactNode;
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -282,16 +295,11 @@ export default function StandardRotaBoard({
     };
 
     commit(next, () =>
-      supabase
-        .from("rota_standard_classes")
-        .update({
-          day_of_week: day,
-          coach_id: coachId,
-          start_mins: startMins,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", classId)
-        .then(({ error: e }) => ({ error: e }))
+      dataSource.updateClass(classId, {
+        day_of_week: day,
+        coach_id: coachId,
+        start_mins: startMins,
+      })
     );
   }
 
@@ -324,11 +332,10 @@ export default function StandardRotaBoard({
     };
 
     commit(next, () =>
-      supabase
-        .from("rota_standard_roster")
-        .update({ shift_start_mins: start, shift_end_mins: end })
-        .eq("id", row.id)
-        .then(({ error: e }) => ({ error: e }))
+      dataSource.updateRoster(row.id, {
+        shift_start_mins: start,
+        shift_end_mins: end,
+      })
     );
   }
 
@@ -338,13 +345,7 @@ export default function StandardRotaBoard({
       ...current,
       roster: current.roster.map((r) => (r.id === rowId ? { ...r, status } : r)),
     };
-    commit(next, () =>
-      supabase
-        .from("rota_standard_roster")
-        .update({ status })
-        .eq("id", rowId)
-        .then(({ error: e }) => ({ error: e }))
-    );
+    commit(next, () => dataSource.updateRoster(rowId, { status }));
   }
 
   function toggleKeyHolder(rowId: string, value: boolean) {
@@ -355,19 +356,12 @@ export default function StandardRotaBoard({
         r.id === rowId ? { ...r, is_key_holder: value } : r
       ),
     };
-    commit(next, () =>
-      supabase
-        .from("rota_standard_roster")
-        .update({ is_key_holder: value })
-        .eq("id", rowId)
-        .then(({ error: e }) => ({ error: e }))
-    );
+    commit(next, () => dataSource.updateRoster(rowId, { is_key_holder: value }));
   }
 
   /**
-   * Lead and cashing-up are capped at one coach per day by partial unique
-   * indexes. Clear whoever currently holds the flag before setting the new
-   * one, so the constraint is never actually hit.
+   * Lead and cashing-up are capped at one coach per day. The board works out
+   * who's being displaced; the data source owns the clear-then-set order.
    */
   function toggleExclusiveFlag(
     rowId: string,
@@ -392,20 +386,14 @@ export default function StandardRotaBoard({
       }),
     };
 
-    commit(next, async () => {
-      for (const d of displaced) {
-        const { error: clearError } = await supabase
-          .from("rota_standard_roster")
-          .update({ [field]: false })
-          .eq("id", d.id);
-        if (clearError) return { error: clearError };
-      }
-      const { error: setError } = await supabase
-        .from("rota_standard_roster")
-        .update({ [field]: value })
-        .eq("id", rowId);
-      return { error: setError };
-    });
+    commit(next, () =>
+      dataSource.setExclusiveFlag(
+        rowId,
+        field,
+        value,
+        displaced.map((d) => d.id)
+      )
+    );
   }
 
   async function addCoachToDay(day: number) {
@@ -451,22 +439,22 @@ export default function StandardRotaBoard({
     };
 
     await commit(next, async () => {
+      // rota_coaches is shared by the standard rota and every week, so it's
+      // keyed on the site in both modes rather than going via the data source.
       if (!existing) {
         const { error: coachError } = await supabase
           .from("rota_coaches")
           .insert({ id: coach.id, site_id: siteId, name: coach.name });
         if (coachError) return { error: coachError };
       }
-      const { error: rosterError } = await supabase.from("rota_standard_roster").insert({
+      return dataSource.insertRoster({
         id: newRow.id,
-        site_id: siteId,
         day_of_week: day,
         coach_id: coach.id,
         sort_order: newRow.sort_order,
         shift_start_mins: newRow.shift_start_mins,
         shift_end_mins: newRow.shift_end_mins,
       });
-      return { error: rosterError };
     });
   }
 
@@ -503,19 +491,13 @@ export default function StandardRotaBoard({
 
     await commit(next, async () => {
       if (affected.length) {
-        const { error: classError } = await supabase
-          .from("rota_standard_classes")
-          .delete()
-          .eq("site_id", siteId)
-          .eq("day_of_week", day)
-          .eq("coach_id", coachId);
+        const { error: classError } = await dataSource.deleteClassesForCoachDay(
+          day,
+          coachId
+        );
         if (classError) return { error: classError };
       }
-      const { error: rosterError } = await supabase
-        .from("rota_standard_roster")
-        .delete()
-        .eq("id", row.id);
-      return { error: rosterError };
+      return dataSource.deleteRoster(row.id);
     });
   }
 
@@ -525,13 +507,7 @@ export default function StandardRotaBoard({
       ...current,
       classes: current.classes.filter((c) => c.id !== classId),
     };
-    commit(next, () =>
-      supabase
-        .from("rota_standard_classes")
-        .delete()
-        .eq("id", classId)
-        .then(({ error: e }) => ({ error: e }))
-    );
+    commit(next, () => dataSource.deleteClass(classId));
   }
 
   function saveModal() {
@@ -574,23 +550,12 @@ export default function StandardRotaBoard({
         ),
       };
       setModal(null);
-      commit(next, () =>
-        supabase
-          .from("rota_standard_classes")
-          .update({ ...payload, updated_at: new Date().toISOString() })
-          .eq("id", editingId)
-          .then(({ error: e }) => ({ error: e }))
-      );
+      commit(next, () => dataSource.updateClass(editingId, payload));
     } else {
       const newClass: ClassRow = { id: crypto.randomUUID(), ...payload };
       const next = { ...current, classes: [...current.classes, newClass] };
       setModal(null);
-      commit(next, () =>
-        supabase
-          .from("rota_standard_classes")
-          .insert({ ...newClass, site_id: siteId })
-          .then(({ error: e }) => ({ error: e }))
-      );
+      commit(next, () => dataSource.insertClass(newClass));
     }
   }
 
@@ -713,9 +678,12 @@ export default function StandardRotaBoard({
           different coach&apos;s column to mark them as covering it — the card still shows
           whose group it really is.
         </div>
-        <button className="add-btn" onClick={openAddModal}>
-          + Add class
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {toolbarExtra}
+          <button className="add-btn" onClick={openAddModal}>
+            + Add class
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -994,8 +962,8 @@ export default function StandardRotaBoard({
 
       {roster.length === 0 && (
         <div className="empty-note">
-          No standard rota saved for {siteName} yet — use “+ coach” on a day to start
-          building it.
+          No rota saved for {scopeLabel} yet — use “+ coach” on a day to start building
+          it.
         </div>
       )}
 

@@ -6,14 +6,21 @@ type Unavailable = Extract<SiteAccess, { ok: false }>;
  * Shown instead of the board when we can't resolve a site for this user — so
  * they get an explanation rather than an empty grid that looks broken.
  */
-export default function RotaUnavailable({ access }: { access: Unavailable }) {
+export default function RotaUnavailable({
+  access,
+  title = "Standard rota",
+}: {
+  access: Unavailable;
+  /** Heading of the page that couldn't be shown. */
+  title?: string;
+}) {
   const isUnmatched = access.reason === "profile-site-unmatched";
 
   return (
     <main className="mx-auto max-w-[1280px] p-6">
       <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
         <h1 className="text-[26px] font-extrabold tracking-[-0.3px] text-slate-dark">
-          Standard rota
+          {title}
         </h1>
         <div className="text-[13px] text-slate-light">
           Home / <b className="font-bold text-orange">Rota</b>
