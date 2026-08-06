@@ -587,6 +587,26 @@
 .root :global(.field-row .field) {
   flex: 1;
 }
+.root :global(.category-swatches) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.root :global(.category-swatch) {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.root :global(.category-swatch:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+.root :global(.category-swatch.is-selected) {
+  border-color: var(--ink);
+}
 .root :global(.modal-actions) {
   display: flex;
   justify-content: space-between;

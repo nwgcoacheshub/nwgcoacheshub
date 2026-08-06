@@ -658,6 +658,10 @@ export default function RotaBoard({
       );
       return;
     }
+    if (modal.catalogueId === CUSTOM_CLASS && !modal.categoryKey) {
+      setError("Choose a colour for this class.");
+      return;
+    }
 
     const current = dataRef.current;
     const payload = {
@@ -1275,8 +1279,8 @@ export default function RotaBoard({
               </select>
               {modal.catalogueId !== CUSTOM_CLASS && (
                 <div className="field-hint">
-                  Pulls in the category, duration and details — all still editable
-                  below.
+                  Sets the colour automatically. Duration and details are pulled in too,
+                  still editable below.
                 </div>
               )}
             </div>
@@ -1306,20 +1310,31 @@ export default function RotaBoard({
               />
             </div>
 
-            <div className="field">
-              <label htmlFor="f-cat">Category / colour</label>
-              <select
-                id="f-cat"
-                value={modal.categoryKey}
-                onChange={(e) => setModal({ ...modal, categoryKey: e.target.value })}
-              >
-                {categories.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {modal.catalogueId === CUSTOM_CLASS && (
+              <div className="field">
+                <label id="f-cat-label">Category / colour</label>
+                <div
+                  className="category-swatches"
+                  role="group"
+                  aria-labelledby="f-cat-label"
+                >
+                  {categories.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      className={`category-swatch${
+                        modal.categoryKey === c.key ? " is-selected" : ""
+                      }`}
+                      style={{ backgroundColor: c.color_hex }}
+                      aria-label={c.label}
+                      aria-pressed={modal.categoryKey === c.key}
+                      title={c.label}
+                      onClick={() => setModal({ ...modal, categoryKey: c.key })}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="field-row">
               <div className="field">
