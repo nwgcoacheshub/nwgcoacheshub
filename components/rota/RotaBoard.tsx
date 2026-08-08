@@ -195,7 +195,15 @@ export default function RotaBoard({
   // Deactivated coaches stay in `coaches` (and coachById above) so their name
   // still resolves wherever their historical roster/class rows are shown —
   // they just drop out of both add-coach pickers.
-  const activeCoaches = useMemo(() => coaches.filter((c) => c.active), [coaches]);
+  // Sorted alphabetically (case-insensitive) rather than insertion order, so
+  // newly added coaches slot into place immediately without a refresh.
+  const activeCoaches = useMemo(
+    () =>
+      coaches
+        .filter((c) => c.active)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
+    [coaches]
+  );
 
   // Which days (0=Mon..6=Sun) each coach appears on in `roster`. Only
   // meaningful as "the Standard Rota" when canManageCoaches is true — see the
@@ -227,12 +235,12 @@ export default function RotaBoard({
       if (row.day_of_week >= 0 && row.day_of_week <= 6) byDay[row.day_of_week].push(row);
     }
     for (const list of byDay) {
-      list.sort(
-        (a, b) =>
-          a.sort_order - b.sort_order ||
-          (coachById.get(a.coach_id)?.name ?? "").localeCompare(
-            coachById.get(b.coach_id)?.name ?? ""
-          )
+      list.sort((a, b) =>
+        (coachById.get(a.coach_id)?.name ?? "").localeCompare(
+          coachById.get(b.coach_id)?.name ?? "",
+          undefined,
+          { sensitivity: "base" }
+        )
       );
     }
     return byDay;
