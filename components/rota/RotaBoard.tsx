@@ -86,7 +86,6 @@ type ModalState = {
   // rota_class_catalogue id.
   catalogueId: string;
   title: string;
-  meta: string;
   categoryKey: string;
   day: number;
   coachId: string;
@@ -666,19 +665,22 @@ export default function RotaBoard({
     }
 
     const current = dataRef.current;
+    // Non-cover is stored as a null set_coach_id, same as every existing row —
+    // only a genuine divergence from the coach column is worth persisting.
     const payload = {
       day_of_week: modal.day,
       coach_id: modal.coachId,
-      set_coach_id: modal.setCoachId || null,
+      set_coach_id: modal.setCoachId === modal.coachId ? null : modal.setCoachId,
       class_catalogue_id: modal.catalogueId === CUSTOM_CLASS ? null : modal.catalogueId,
       title,
       category_key: modal.categoryKey,
-      meta: modal.meta.trim() || null,
       start_mins: modal.startMins,
       duration_mins: modal.durationMins,
     };
 
     if (modal.editingId) {
+      // No `meta` key here at all — the field's gone from the UI, and this
+      // patch must not touch whatever's already saved in that column.
       const editingId = modal.editingId;
       const next = {
         ...current,
@@ -689,7 +691,7 @@ export default function RotaBoard({
       setModal(null);
       commit(next, () => dataSource.updateClass(editingId, payload));
     } else {
-      const newClass: ClassRow = { id: crypto.randomUUID(), ...payload };
+      const newClass: ClassRow = { id: crypto.randomUUID(), meta: null, ...payload };
       const next = { ...current, classes: [...current.classes, newClass] };
       setModal(null);
       commit(next, () => dataSource.insertClass(newClass));
@@ -700,15 +702,17 @@ export default function RotaBoard({
 
   function openAddModal() {
     const day = 0;
+    const coachId = rosterByDay[day][0]?.coach_id ?? "";
     setModal({
       editingId: null,
       catalogueId: "", // catalogue picker, nothing chosen yet
       title: "",
-      meta: "",
       categoryKey: categories[0]?.key ?? "",
       day,
-      coachId: rosterByDay[day][0]?.coach_id ?? "",
-      setCoachId: "",
+      coachId,
+      // Defaults to the coach column's pick — see withCoachId for how it
+      // keeps following that pick until manually overridden.
+      setCoachId: coachId,
       startMins: DAY_START,
       durationMins: 60,
     });
@@ -721,21 +725,39 @@ export default function RotaBoard({
       // whose catalogue entry has since been retired — edits as a custom class.
       catalogueId: ev.class_catalogue_id ?? CUSTOM_CLASS,
       title: ev.title,
-      meta: ev.meta ?? "",
       categoryKey: ev.category_key,
       day: ev.day_of_week,
       coachId: ev.coach_id,
-      setCoachId: ev.set_coach_id ?? "",
+      // Exactly as stored — a null set_coach_id displays as the same coach
+      // (no cover), a genuine cover shows the actual set coach. Either way,
+      // this is the open-time snapshot withCoachId compares later edits to.
+      setCoachId: ev.set_coach_id ?? ev.coach_id,
       startMins: ev.start_mins,
       durationMins: ev.duration_mins,
     });
+  }
+
+  /**
+   * Coach column changed to `newCoachId`. Set coach auto-follows along with
+   * it, but only while it hasn't been manually diverged from the coach
+   * column — i.e. it still matches the coach column's previous value. Once
+   * someone's picked a genuine cover, further coach column changes leave it
+   * alone.
+   */
+  function withCoachId(current: ModalState, newCoachId: string): ModalState {
+    const wasFollowing = current.setCoachId === current.coachId;
+    return {
+      ...current,
+      coachId: newCoachId,
+      setCoachId: wasFollowing ? newCoachId : current.setCoachId,
+    };
   }
 
   /** Applying a catalogue pick: fills the fields in, but nothing is locked. */
   function selectCatalogueItem(current: ModalState, catalogueId: string): ModalState {
     if (catalogueId === CUSTOM_CLASS) {
       // Clear the title that came from the catalogue so they type their own.
-      // Category, duration and meta stay as they are, to be edited by hand.
+      // Category and duration stay as they are, to be edited by hand.
       return { ...current, catalogueId, title: "" };
     }
     const item = catalogue.find((c) => c.id === catalogueId);
@@ -746,9 +768,6 @@ export default function RotaBoard({
       title: item.title,
       categoryKey: item.category_key,
       durationMins: item.default_duration_mins,
-      // Only overwrite details when the catalogue row actually has some, so
-      // switching between items doesn't wipe what the user typed.
-      meta: item.default_meta?.trim() ? item.default_meta : current.meta,
     };
   }
 
@@ -1086,16 +1105,9 @@ export default function RotaBoard({
                               <div className="meta">
                                 {timeRangeLabel(ev.start_mins, ev.duration_mins)}
                               </div>
-                              <div className="meta">{ev.meta ?? "—"}</div>
-                              {isCover ? (
-                                <div className="coachline is-cover">
-                                  Usually {coachName(ev.set_coach_id)}&apos;s group
-                                </div>
-                              ) : (
-                                <div className="coachline">
-                                  Coach: {coachName(ev.coach_id)}
-                                </div>
-                              )}
+                              <div className="coachline">
+                                Coach: {coachName(ev.coach_id)}
+                              </div>
                             </div>
                           );
                         })}
@@ -1284,8 +1296,8 @@ export default function RotaBoard({
               </select>
               {modal.catalogueId !== CUSTOM_CLASS && (
                 <div className="field-hint">
-                  Sets the colour automatically. Duration and details are pulled in too,
-                  still editable below.
+                  Sets the colour automatically. Duration is pulled in too, still
+                  editable below.
                 </div>
               )}
             </div>
@@ -1303,17 +1315,6 @@ export default function RotaBoard({
                 />
               </div>
             )}
-
-            <div className="field">
-              <label htmlFor="f-meta">Details (ages / capacity)</label>
-              <input
-                id="f-meta"
-                type="text"
-                placeholder="e.g. Ages 7–10 · Cap 10"
-                value={modal.meta}
-                onChange={(e) => setModal({ ...modal, meta: e.target.value })}
-              />
-            </div>
 
             {modal.catalogueId === CUSTOM_CLASS && (
               <div className="field">
@@ -1349,11 +1350,7 @@ export default function RotaBoard({
                   value={modal.day}
                   onChange={(e) => {
                     const day = parseInt(e.target.value, 10);
-                    setModal({
-                      ...modal,
-                      day,
-                      coachId: rosterByDay[day][0]?.coach_id ?? "",
-                    });
+                    setModal(withCoachId({ ...modal, day }, rosterByDay[day][0]?.coach_id ?? ""));
                   }}
                 >
                   {DAY_NAMES.map((n, i) => (
@@ -1364,12 +1361,12 @@ export default function RotaBoard({
                 </select>
               </div>
               <div className="field">
-                <label htmlFor="f-coach">Coach column (who&apos;s taking it)</label>
+                <label htmlFor="f-coach">Coach column</label>
                 <select
                   id="f-coach"
                   value={modal.coachId}
                   disabled={modalDayCoaches.length === 0}
-                  onChange={(e) => setModal({ ...modal, coachId: e.target.value })}
+                  onChange={(e) => setModal(withCoachId(modal, e.target.value))}
                 >
                   {modalDayCoaches.length === 0 ? (
                     <option value="">Nobody rostered</option>
@@ -1393,7 +1390,6 @@ export default function RotaBoard({
                 value={modal.setCoachId}
                 onChange={(e) => setModal({ ...modal, setCoachId: e.target.value })}
               >
-                <option value="">Same as coach column</option>
                 {coaches.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -1401,7 +1397,8 @@ export default function RotaBoard({
                 ))}
               </select>
               <div className="field-hint">
-                Leave as “same as coach column” if there&apos;s no cover happening.
+                Defaults to match the coach column. Only change this for a genuine
+                cover.
               </div>
             </div>
 

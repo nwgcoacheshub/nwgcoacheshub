@@ -42,6 +42,8 @@ export const DURATION_OPTIONS = [
   { value: 90, label: "1.5 hr" },
   { value: 120, label: "2 hr" },
   { value: 180, label: "3 hr" },
+  { value: 240, label: "4 hr" },
+  { value: 300, label: "5 hr" },
 ];
 
 export type CoachStatus = "working" | "leave" | "sick";
