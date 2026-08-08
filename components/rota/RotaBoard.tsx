@@ -329,11 +329,30 @@ export default function RotaBoard({
       return;
     }
 
+    // Dropping into a different coach's column is always a cover — lock in
+    // whoever really owns the class before its coach column changes under
+    // it. A "no cover" row stores set_coach_id as null (not a copy of
+    // coach_id), so simply leaving it untouched would silently lose the real
+    // owner the moment coach_id moves. If it's already covered, keep
+    // pointing at that same original owner rather than the coach it's
+    // currently sitting with. Moving within the same coach's column (a pure
+    // time/day change) leaves set_coach_id exactly as it was.
+    const coachChanged = target.coach_id !== coachId;
+    const setCoachId = coachChanged
+      ? (target.set_coach_id ?? target.coach_id)
+      : target.set_coach_id;
+
     const next = {
       ...current,
       classes: current.classes.map((c) =>
         c.id === classId
-          ? { ...c, day_of_week: day, coach_id: coachId, start_mins: startMins }
+          ? {
+              ...c,
+              day_of_week: day,
+              coach_id: coachId,
+              set_coach_id: setCoachId,
+              start_mins: startMins,
+            }
           : c
       ),
     };
@@ -342,6 +361,7 @@ export default function RotaBoard({
       dataSource.updateClass(classId, {
         day_of_week: day,
         coach_id: coachId,
+        set_coach_id: setCoachId,
         start_mins: startMins,
       })
     );
