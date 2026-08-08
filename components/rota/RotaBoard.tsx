@@ -4,7 +4,9 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import styles from "./rota-board.module.css";
 import {
+  COACH_HEAD_H,
   COL_W,
+  DAY_HEAD_H,
   DAY_NAMES,
   DAY_START,
   DIVIDER_W,
@@ -784,8 +786,11 @@ export default function RotaBoard({
 
   const gridStyle: React.CSSProperties & Record<string, string> = {
     gridTemplateColumns: layout.cols.map((w) => w + "px").join(" "),
-    gridTemplateRows: `auto auto repeat(${SLOTS}, ${SLOT_PX}px)`,
+    gridTemplateRows: `${DAY_HEAD_H}px ${COACH_HEAD_H}px repeat(${SLOTS}, ${SLOT_PX}px)`,
     ["--hourpx"]: HOUR_PX + "px",
+    // Where the pinned coach row parks itself: immediately under the pinned
+    // day-name row, so it needs that row's exact height.
+    ["--dayhead-h"]: DAY_HEAD_H + "px",
   };
 
   const popoverRow = popover
@@ -812,8 +817,8 @@ export default function RotaBoard({
       : null;
 
   return (
-    <div className={styles.root}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div className={`${styles.root} ${styles.fill}`}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-5">
         <div className="text-[13px] text-slate-light">
           Each day is split into a column per coach working that day. Drag a class into a
           different coach&apos;s column to mark them as covering it — the card still shows

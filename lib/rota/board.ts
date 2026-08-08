@@ -15,6 +15,14 @@ export const SLOTS = (DAY_END - DAY_START) / SLOT_MIN;
 export const COL_W = 128; // px, keeps full class names legible
 export const TIME_COL_W = 64;
 export const DIVIDER_W = 14;
+// The two header rows are fixed heights rather than `auto`. The coach row is
+// pinned directly beneath the day-name row while the board scrolls, and a
+// sticky `top` offset has to be a known number — with auto rows there'd be
+// nothing to hand it. The CSS sets explicit line-heights on the text in both
+// rows so these hold on any platform's system font.
+export const DAY_HEAD_H = 60;
+export const COACH_HEAD_H = 34;
+
 export const MIN_SHIFT_MINS = 30; // a shift can't be squashed below this
 
 export const DAY_NAMES = [

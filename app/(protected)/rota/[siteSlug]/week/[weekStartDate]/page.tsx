@@ -82,7 +82,7 @@ export default async function RotaWeekPage({
           Home / <b className="font-bold text-orange">Rota</b>
         </div>
       </div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm text-slate-light">Week of {weekRange}</div>
         <WeekNav
           siteSlug={site.slug}
@@ -142,9 +142,12 @@ export default async function RotaWeekPage({
         .order("start_mins"),
     ]);
 
+  // Same full-bleed, self-scrolling shell as the Standard Rota — it's the same
+  // board. The no-rota-yet branch above stays a normal boxed page: there's no
+  // grid on it, just a card.
   return (
-    <main className="mx-auto max-w-[1280px] p-6">
-      {head}
+    <main className="fills-viewport flex min-h-0 flex-1 flex-col">
+      <div className="px-5 pt-4">{head}</div>
       <WeeklyRotaBoard
         siteId={site.id}
         siteName={site.name}

@@ -67,26 +67,30 @@ export default async function RotaSitePage({
         .order("start_mins"),
     ]);
 
+  // Full width and full height: the board is the page, and it scrolls itself.
+  // Only the heading block carries padding — the grid below runs edge to edge.
   return (
-    <main className="mx-auto max-w-[1280px] p-6">
-      <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[26px] font-extrabold tracking-[-0.3px] text-slate-dark">
-            Standard rota
-          </h1>
-          <SiteSwitcher
-            sites={access.sites}
-            currentSlug={site.slug}
-            canSwitch={access.canSwitch}
-          />
-          <RotaViewTabs siteSlug={site.slug} active="standard" />
+    <main className="fills-viewport flex min-h-0 flex-1 flex-col">
+      <div className="px-5 pt-4">
+        <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-[26px] font-extrabold tracking-[-0.3px] text-slate-dark">
+              Standard rota
+            </h1>
+            <SiteSwitcher
+              sites={access.sites}
+              currentSlug={site.slug}
+              canSwitch={access.canSwitch}
+            />
+            <RotaViewTabs siteSlug={site.slug} active="standard" />
+          </div>
+          <div className="text-[13px] text-slate-light">
+            Home / <b className="font-bold text-orange">Rota</b>
+          </div>
         </div>
-        <div className="text-[13px] text-slate-light">
-          Home / <b className="font-bold text-orange">Rota</b>
+        <div className="mb-3 text-sm text-slate-light">
+          The repeating weekly template this site works to.
         </div>
-      </div>
-      <div className="mb-5 text-sm text-slate-light">
-        The repeating weekly template this site works to.
       </div>
 
       {/* Keyed on the site so switching remounts the board with fresh state —

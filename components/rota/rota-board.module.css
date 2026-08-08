@@ -27,7 +27,6 @@
   --ink-soft: #7a828c;
   --line: #e6e8eb;
   --divider: #edeef0;
-  --radius: 8px;
 
   color: var(--ink);
 }
@@ -40,22 +39,48 @@
   font-family: inherit;
 }
 
+/* Full-height mode: the board takes the page's leftover height and hands it to
+   .board-scroll, which becomes the only scroll region. Only RotaBoard opts in —
+   .root on its own is also used by the week's empty state and its regenerate
+   confirmation, neither of which should stretch. */
+.fill {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* The board grid runs edge to edge, so the things stacked above and below it
+   carry the page's horizontal padding themselves. Scoped to .fill so the same
+   banner keeps its own margins inside the regenerate modal and the empty state. */
+.fill :global(.board-error),
+.fill :global(.empty-note) {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
 /* ---------- Board ---------- */
+/* The single scroll region, in both axes. .board must not declare an overflow
+   of its own: that would make *it* the scrollport, and the pinned header rows
+   and time column below would have nothing to stick to. */
 .root :global(.board-scroll) {
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* The grid runs edge to edge now, so it has no border of its own — these two
+     are what used to be the board's top and bottom edge. */
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
 }
 .root :global(.board) {
   display: grid;
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
   width: max-content;
   min-width: 100%;
 }
 
+/* Where the pinned row and the pinned column meet — held to both edges, and
+   above each of them so neither shows through underneath. */
 .root :global(.corner) {
   grid-row: 1 / span 2;
   grid-column: 1;
@@ -63,8 +88,9 @@
   border-bottom: 1px solid var(--line);
   border-right: 1px solid var(--line);
   position: sticky;
+  top: 0;
   left: 0;
-  z-index: 6;
+  z-index: 7;
 }
 
 .root :global(.day-divider) {
@@ -72,6 +98,7 @@
   background: var(--divider);
 }
 
+/* Row 1, pinned to the top of the scroll region. */
 .root :global(.day-head) {
   grid-row: 1;
   border-bottom: 1px solid var(--line);
@@ -80,6 +107,9 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 .root :global(.day-head-top) {
   display: flex;
@@ -87,8 +117,12 @@
   justify-content: space-between;
   gap: 8px;
 }
+/* The explicit line-heights here and on .add-coach-btn / .cname below add up to
+   DAY_HEAD_H and COACH_HEAD_H exactly. Left to `normal` they'd vary with the
+   platform's system font and overflow the fixed header rows on some machines. */
 .root :global(.day-head .dname) {
   font-size: 14.5px;
+  line-height: 17px;
   font-weight: 700;
   color: var(--brand);
   white-space: nowrap;
@@ -106,6 +140,7 @@
   color: var(--brand-dark);
   font-weight: 600;
   font-size: 11px;
+  line-height: 14px;
   padding: 3px 8px;
   border-radius: 6px;
   cursor: pointer;
@@ -115,6 +150,7 @@
   background: var(--brand-tint);
 }
 
+/* Row 2, pinned immediately below the day-name row. */
 .root :global(.coach-head) {
   grid-row: 2;
   border-bottom: 2px solid var(--line);
@@ -124,11 +160,14 @@
   justify-content: center;
   padding: 6px 4px;
   background: #fafafb;
-  position: relative;
+  position: sticky;
+  top: var(--dayhead-h);
+  z-index: 5;
 }
 .root :global(.coach-head .cname) {
   font-weight: 700;
   font-size: 12.5px;
+  line-height: 16px;
   color: var(--ink);
   text-align: center;
   cursor: pointer;
@@ -179,6 +218,8 @@
   color: var(--brand-dark);
 }
 
+/* Column 1, pinned to the left edge of the scroll region. Below .corner (7) so
+   it slides under it, above the cards (max 2) so they slide under this. */
 .root :global(.time-col) {
   grid-row: 3;
   grid-column: 1;
@@ -695,5 +736,5 @@
 .root :global(.empty-note) {
   font-size: 12.5px;
   color: var(--ink-soft);
-  padding: 10px 0 0;
+  padding: 10px 0;
 }

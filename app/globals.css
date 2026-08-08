@@ -29,3 +29,32 @@ body {
   background: var(--color-background);
   color: var(--color-ink);
 }
+
+/*
+  Full-height pages.
+
+  A page opts in by putting `fills-viewport` on its root element (the rota board
+  routes do). That locks the app shell to the viewport and gives the page all the
+  space left between the nav and the footer, so the page can own its own
+  scrolling instead of the window scrolling. It's keyed off the page rather than
+  applied to the shell outright because every other page — dashboard, users —
+  still wants a normal window-scrolling document with the footer after the
+  content, not pinned below it.
+*/
+.app-shell:has(.fills-viewport) {
+  height: 100dvh;
+  overflow: hidden;
+}
+.app-shell:has(.fills-viewport) .app-main {
+  display: flex;
+  flex-direction: column;
+  /* Without this the region can't shrink below its content, and the page would
+     push the footer off the bottom instead of scrolling inside itself. */
+  min-height: 0;
+}
+/* Nothing scrolls past the footer on these pages, so it doesn't need the
+   breathing room it gets at the end of a long document. */
+.app-shell:has(.fills-viewport) .app-footer {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
