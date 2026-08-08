@@ -994,65 +994,6 @@ export default function RotaBoard({
                       }
                       onDrop={(e) => onZoneDrop(e, d, row.coach_id)}
                     >
-                      {/* Off-shift hatching and the draggable shift markers live
-                          in lane 0, rendered before the cards. */}
-                      {lane === 0 && (
-                        <>
-                          {row.shift_start_mins > DAY_START && (
-                            <div
-                              className="offshift"
-                              style={{ top: 0, height: topPx(row.shift_start_mins) }}
-                            />
-                          )}
-                          {row.shift_end_mins < DAY_START + SLOTS * SLOT_MIN && (
-                            <div
-                              className="offshift"
-                              style={{
-                                top: topPx(row.shift_end_mins),
-                                height:
-                                  SLOTS * SLOT_PX - topPx(row.shift_end_mins),
-                              }}
-                            />
-                          )}
-                          {(
-                            [
-                              ["start", "mk-start", row.shift_start_mins],
-                              ["finish", "mk-finish", row.shift_end_mins],
-                            ] as const
-                          ).map(([edge, cls, atMins]) => (
-                            <div
-                              key={edge}
-                              className={`shift-marker ${cls}`}
-                              style={{ top: topPx(atMins) - 9 }}
-                              draggable
-                              onDragStart={(e) => {
-                                e.currentTarget.classList.add("dragging");
-                                grabOffsetY.current =
-                                  e.clientY -
-                                  e.currentTarget.getBoundingClientRect().top -
-                                  9;
-                                e.dataTransfer.setData(
-                                  "text/plain",
-                                  JSON.stringify({
-                                    type: "shift",
-                                    day: d,
-                                    coachId: row.coach_id,
-                                    edge,
-                                  })
-                                );
-                                e.dataTransfer.effectAllowed = "move";
-                              }}
-                              onDragEnd={(e) =>
-                                e.currentTarget.classList.remove("dragging")
-                              }
-                            >
-                              {(edge === "start" ? "Start " : "Finish ") +
-                                fmtClock(atMins)}
-                            </div>
-                          ))}
-                        </>
-                      )}
-
                       {dayClasses
                         .filter((ev) => (lanes.get(ev.id) ?? 0) === lane)
                         .map((ev) => {
@@ -1113,6 +1054,79 @@ export default function RotaBoard({
                         })}
                     </div>
                   ));
+                })}
+
+                {/* Off-shift hatching and the draggable shift markers span the
+                    coach's whole column (all lanes combined), not just lane 0 —
+                    rendered as their own overlay so they aren't clipped to a
+                    single lane's width when a coach's classes have split into
+                    multiple lanes. */}
+                {dayRoster.map((row) => {
+                  const key = d + "|" + row.coach_id;
+                  const ci = layout.coachCols.get(key)!;
+                  return (
+                    <div
+                      key={"shiftmarker-" + row.id}
+                      style={{
+                        gridColumn: `${ci.startCol} / span ${ci.laneCount}`,
+                        gridRow: `3 / span ${SLOTS}`,
+                        position: "relative",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {row.shift_start_mins > DAY_START && (
+                        <div
+                          className="offshift"
+                          style={{ top: 0, height: topPx(row.shift_start_mins) }}
+                        />
+                      )}
+                      {row.shift_end_mins < DAY_START + SLOTS * SLOT_MIN && (
+                        <div
+                          className="offshift"
+                          style={{
+                            top: topPx(row.shift_end_mins),
+                            height: SLOTS * SLOT_PX - topPx(row.shift_end_mins),
+                          }}
+                        />
+                      )}
+                      {(
+                        [
+                          ["start", "mk-start", row.shift_start_mins],
+                          ["finish", "mk-finish", row.shift_end_mins],
+                        ] as const
+                      ).map(([edge, cls, atMins]) => (
+                        <div
+                          key={edge}
+                          className={`shift-marker ${cls}`}
+                          style={{ top: topPx(atMins) - 9, pointerEvents: "auto" }}
+                          draggable
+                          onDragStart={(e) => {
+                            e.currentTarget.classList.add("dragging");
+                            grabOffsetY.current =
+                              e.clientY -
+                              e.currentTarget.getBoundingClientRect().top -
+                              9;
+                            e.dataTransfer.setData(
+                              "text/plain",
+                              JSON.stringify({
+                                type: "shift",
+                                day: d,
+                                coachId: row.coach_id,
+                                edge,
+                              })
+                            );
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragEnd={(e) =>
+                            e.currentTarget.classList.remove("dragging")
+                          }
+                        >
+                          {(edge === "start" ? "Start " : "Finish ") +
+                            fmtClock(atMins)}
+                        </div>
+                      ))}
+                    </div>
+                  );
                 })}
               </Fragment>
             );
