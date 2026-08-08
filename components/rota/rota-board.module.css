@@ -114,7 +114,7 @@
 .root :global(.day-head-top) {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
 }
 /* The explicit line-heights here and on .add-coach-btn / .cname below add up to
@@ -710,6 +710,19 @@
 }
 .root :global(.add-btn:hover) {
   background: var(--brand-dark);
+}
+
+/* "Manage coaches" (.btn) and "+ Add class" (.add-btn) sit in the board
+   toolbar, not a modal — CLAUDE.md's compact-density pass (2026-07-29) sizes
+   this pair to the site's standard button token (px-3.5 py-2, text-[13px],
+   rounded-lg), same as e.g. UsersTable's primaryButtonClass/secondaryButtonClass.
+   Scoped to its own class rather than changed on .btn/.add-btn directly,
+   since those two are shared with modal Save/Cancel buttons this session
+   doesn't touch. */
+.root :global(.toolbar-btn) {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 8px;
 }
 
 .root :global(.board-error) {

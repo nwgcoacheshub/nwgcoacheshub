@@ -828,14 +828,14 @@ export default function RotaBoard({
           {toolbarExtra}
           {canManageCoaches && (
             <button
-              className="btn btn-ghost"
+              className="btn btn-ghost toolbar-btn"
               style={{ border: "1px solid var(--line)" }}
               onClick={() => setManageCoachesOpen(true)}
             >
               Manage coaches
             </button>
           )}
-          <button className="add-btn" onClick={openAddModal}>
+          <button className="add-btn toolbar-btn" onClick={openAddModal}>
             + Add class
           </button>
         </div>
