@@ -10,6 +10,7 @@ import RotaBoard, {
   type Coach,
   type RosterRow,
 } from "./RotaBoard";
+import type { RotaExportSpec } from "./RotaExportButton";
 import { useGenerateWeek } from "./useGenerateWeek";
 
 /**
@@ -32,6 +33,7 @@ export default function WeeklyRotaBoard({
   initialCoaches,
   initialRoster,
   initialClasses,
+  exportSpec,
 }: {
   siteId: string;
   siteName: string;
@@ -45,6 +47,7 @@ export default function WeeklyRotaBoard({
   initialCoaches: Coach[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
+  exportSpec: RotaExportSpec;
 }) {
   const dataSource = useMemo(() => weeklyDataSource(weeklyRotaId), [weeklyRotaId]);
   const { generate, pending, error, dismissError } = useGenerateWeek(siteId, weekStart);
@@ -74,6 +77,7 @@ export default function WeeklyRotaBoard({
         initialCoaches={initialCoaches}
         initialRoster={initialRoster}
         initialClasses={initialClasses}
+        exportSpec={exportSpec}
         toolbarExtra={
           <button className="btn btn-danger" onClick={() => setConfirming(true)}>
             Regenerate from Standard Rota

@@ -28,6 +28,7 @@ import {
 } from "@/lib/rota/board";
 import type { RotaDataSource } from "@/lib/rota/rotaDataSource";
 import ManageCoachesModal from "./ManageCoachesModal";
+import RotaExportButton, { type RotaExportSpec } from "./RotaExportButton";
 
 export type Category = { key: string; label: string; color_hex: string };
 export type Coach = { id: string; name: string; active: boolean };
@@ -120,6 +121,7 @@ export default function RotaBoard({
   initialRoster,
   initialClasses,
   toolbarExtra,
+  exportSpec,
   canManageCoaches = false,
 }: {
   dataSource: RotaDataSource;
@@ -133,6 +135,14 @@ export default function RotaBoard({
   initialClasses: ClassRow[];
   /** Extra toolbar control, e.g. the week board's regenerate action. */
   toolbarExtra?: React.ReactNode;
+  /**
+   * Turns on the "Export as PDF" toolbar action. It lives in here rather than
+   * being passed through `toolbarExtra` because it has to export what's on the
+   * board *now* — this component's live roster/class state, including edits made
+   * since the page loaded — and that state never leaves this component. The
+   * export itself is a wholly separate static rendering: see RotaExportLayout.
+   */
+  exportSpec?: RotaExportSpec;
   /**
    * Shows the "Manage coaches" entry point. Only true on the Standard Rota:
    * its deactivate-confirmation step checks which days a coach appears on in
@@ -873,6 +883,15 @@ export default function RotaBoard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {toolbarExtra}
+          {exportSpec && (
+            <RotaExportButton
+              spec={exportSpec}
+              coaches={coaches}
+              roster={roster}
+              classes={classes}
+              categories={categories}
+            />
+          )}
           {canManageCoaches && (
             <button
               className="btn btn-ghost toolbar-btn"

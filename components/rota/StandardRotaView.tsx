@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { standardDataSource } from "@/lib/rota/rotaDataSource";
+import type { RotaExportSpec } from "./RotaExportButton";
 import RotaBoard, {
   type CatalogueItem,
   type Category,
@@ -25,6 +26,7 @@ export default function StandardRotaView({
   initialCoaches,
   initialRoster,
   initialClasses,
+  exportSpec,
 }: {
   siteId: string;
   siteName: string;
@@ -33,6 +35,7 @@ export default function StandardRotaView({
   initialCoaches: Coach[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
+  exportSpec: RotaExportSpec;
 }) {
   const dataSource = useMemo(() => standardDataSource(siteId), [siteId]);
 
@@ -46,6 +49,7 @@ export default function StandardRotaView({
       initialCoaches={initialCoaches}
       initialRoster={initialRoster}
       initialClasses={initialClasses}
+      exportSpec={exportSpec}
       canManageCoaches
     />
   );

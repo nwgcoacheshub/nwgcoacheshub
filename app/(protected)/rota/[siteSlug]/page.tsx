@@ -104,6 +104,14 @@ export default async function RotaSitePage({
         initialCoaches={(coachesRes.data ?? []) as Coach[]}
         initialRoster={(rosterRes.data ?? []) as RosterRow[]}
         initialClasses={(classesRes.data ?? []) as ClassRow[]}
+        // `week: null` is what makes this the undated export: no date range in
+        // the header, no dates on the day columns, and a file name that says
+        // template rather than naming a week.
+        exportSpec={{
+          siteName: site.name,
+          fileBase: `${site.slug}-standard-rota`,
+          week: null,
+        }}
       />
     </main>
   );

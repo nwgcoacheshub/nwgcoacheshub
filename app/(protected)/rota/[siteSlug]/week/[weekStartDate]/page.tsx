@@ -6,6 +6,7 @@ import {
   formatWeekDate,
   mondayOf,
   parseWeekDate,
+  weekDayLabels,
   weekRangeLabel,
 } from "@/lib/rota/week";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
@@ -160,6 +161,13 @@ export default async function RotaWeekPage({
         initialCoaches={(coachesRes.data ?? []) as Coach[]}
         initialRoster={(rosterRes.data ?? []) as RosterRow[]}
         initialClasses={(classesRes.data ?? []) as ClassRow[]}
+        // Dated export: the same "4–10 Aug 2026" range shown above the board,
+        // plus a date per day column, and the week's Monday in the file name.
+        exportSpec={{
+          siteName: site.name,
+          fileBase: `${site.slug}-week-${monday}`,
+          week: { rangeLabel: weekRange, dayDates: weekDayLabels(parsed) },
+        }}
       />
     </main>
   );

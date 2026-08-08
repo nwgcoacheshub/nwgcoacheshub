@@ -99,6 +99,19 @@ function monthShort(date: Date) {
 }
 
 /**
+ * Per-day labels for the Mon–Sun of `monday`: ["4 Aug", "5 Aug", …]. Used by the
+ * PDF export to date each day column. Built here, on the server, from the same
+ * spelled-out month names as weekRangeLabel — so a day column and the range in
+ * the export's own header can't disagree about what month it is.
+ */
+export function weekDayLabels(monday: Date): string[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(monday, i);
+    return `${dayNum(day)} ${monthShort(day)}`;
+  });
+}
+
+/**
  * Mon–Sun range for display: "4–10 Aug 2026", "28 Sep – 4 Oct 2026",
  * "28 Dec 2026 – 3 Jan 2027". This is the {date range} in the phase 5a copy.
  */
