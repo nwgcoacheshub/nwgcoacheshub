@@ -21,7 +21,7 @@ export default async function UsersPage() {
       <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
         <h1 className="text-[26px] font-extrabold tracking-[-0.3px] text-slate-dark">Users</h1>
         <div className="text-[13px] text-slate-light">
-          Home / <b className="font-bold text-orange">Users</b>
+          Home / Admin / <b className="font-bold text-orange">Users</b>
         </div>
       </div>
       <div className="mb-6 text-sm text-slate-light">

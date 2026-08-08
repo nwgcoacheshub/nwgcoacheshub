@@ -20,7 +20,8 @@ existing tools already handle that. Do not build gymnast/class CRUD features her
 
 ### Functional in v1
 - Login (Supabase Auth)
-- Users page (add / edit / deactivate / reset password — admin only)
+- Users page (add / edit / deactivate / reset password — admin only), under Admin
+  (`/admin/users`)
 
 ### Static placeholder only (NOT wired to real data or links yet)
 - Weekly Focus + Pre-school theme ("This week" hero)
@@ -46,9 +47,28 @@ Two separate badges sit under the "Welcome back" heading — not a single combin
 (placeholder text, non-functional), "Report a concern" button (orange, non-functional),
 notification bell icon (non-functional), avatar circle with initials (non-functional).
 
-**Nav row:** Home (active on dashboard), Users (only rendered if the logged-in user's
-real `profiles.role === 'admin'`), Rota (placeholder href). Must always use real
-session/profile data — see the rule against demo toggles below.
+**Nav row:** Home (flat link, active on dashboard) and Settings (flat link, personal
+account management) have no dropdown. Club Profile, Gymnastics, Operations, People, and
+Admin are dropdown menus — click the trigger to reveal sub-items; only one dropdown open
+at a time; closes on outside click or Escape:
+- **Club Profile** — Burnley, Coventry, Leeds, Mansfield, Rotherham, Wirral,
+  Wolverhampton, Head Office (currently inert/disabled placeholders — no per-site route
+  exists yet)
+- **Gymnastics** — Weekly Focus, Programme Resources, Coaching Guides (currently
+  inert/disabled placeholders — no sub-route exists yet)
+- **Operations** — Rota (existing `/rota` route, fully functional) and Site SOPs (stub
+  route `/operations/site-sops`)
+- **People** — HR Links, My Compliance (currently inert/disabled placeholders — no
+  sub-route exists yet)
+- **Admin** — only rendered (trigger + contents) if the logged-in user's real
+  `profiles.role === 'admin'`; contains Users (`/admin/users` — add / edit / deactivate /
+  reset password)
+
+Each dropdown's parent landing page (`/club-profile`, `/gymnastics`, `/operations`,
+`/people`, `/admin`, `/settings`) still exists as a stub route for direct navigation —
+the dropdown is just a faster path to sub-items, it doesn't replace the landing page.
+Must always use real session/profile data for the Admin gate — see the rule against demo
+toggles below.
 
 **Page head:** `Welcome back, {full_name}` (real data), breadcrumb "Home / Dashboard",
 the two badges described above (real data), greeting subline with today's date, e.g.
@@ -102,7 +122,7 @@ title + subtitle) and rows (name + status pill, href="#"):
 
 **Footer:** small text "NWG Coaches Hub · v1 dashboard", log out link.
 
-Everything above except the greeting, the two badges, and Users nav-item visibility is
+Everything above except the greeting, the two badges, and Admin nav-item visibility is
 hardcoded placeholder content — no database tables, no fetching, just static markup.
 
 ## Design tokens (exact values — use these, don't approximate)
