@@ -207,7 +207,7 @@ export default function NavBar({
       </header>
 
       <nav className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-[1280px] items-center gap-1 overflow-x-auto px-6">
+        <div className="mx-auto flex max-w-[1280px] items-center gap-1 px-6">
           <NavLink href="/" active={pathname === "/"}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z" />
