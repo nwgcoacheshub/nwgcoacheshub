@@ -1,0 +1,24 @@
+-- NWG Coaches Hub — Rota Tool, security follow-up
+-- Removes anon's EXECUTE grant on upsert_weekly_rota().
+--
+-- Same cause as 0010: Supabase ships an `alter default privileges in schema
+-- public grant all on functions to anon, authenticated, service_role`, so every
+-- function created here is callable by anon unless that grant is explicitly
+-- removed. 0004 relied on the default grant deliberately and said so, on the
+-- reasoning that unauthorized callers are stopped by the function's own check
+-- rather than by the grant.
+--
+-- That reasoning still holds — this is not an exploitable hole. upsert_weekly_rota
+-- is security definer and does its own admin-or-own-site check against
+-- auth.uid(), which is null for an anon caller, so an anon call raises
+-- 'Not authorized to generate a rota for this site' before touching a row.
+-- The grant is closed anyway so the project has one rule for security-definer
+-- functions — explicitly revoke anon — instead of two competing precedents.
+--
+-- Only the anon grant moves. 0004 never granted to authenticated explicitly;
+-- that access comes from the same default privileges and is left in place, so
+-- the Generate-week button keeps working for signed-in users.
+--
+-- The function body, including its authorization check, is untouched.
+
+revoke execute on function public.upsert_weekly_rota(uuid, date) from anon;
