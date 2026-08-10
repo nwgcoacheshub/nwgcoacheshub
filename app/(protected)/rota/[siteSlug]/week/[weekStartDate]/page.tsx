@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
+import { getCanEditRota } from "@/lib/rota/canEdit";
 import {
   currentMonday,
   formatWeekDate,
@@ -56,6 +57,9 @@ export default async function RotaWeekPage({
   }
 
   const weekRange = weekRangeLabel(parsed);
+  // Same split as the Standard Rota page: site visibility and write rights are
+  // separate questions, and getCurrentProfile() is cached per request.
+  const canEdit = await getCanEditRota();
   const supabase = await createClient();
 
   const { data: weekly } = await supabase
@@ -103,6 +107,7 @@ export default async function RotaWeekPage({
           siteName={site.name}
           weekStart={monday}
           weekRange={weekRange}
+          canEdit={canEdit}
         />
       </main>
     );
@@ -161,6 +166,7 @@ export default async function RotaWeekPage({
         initialCoaches={(coachesRes.data ?? []) as Coach[]}
         initialRoster={(rosterRes.data ?? []) as RosterRow[]}
         initialClasses={(classesRes.data ?? []) as ClassRow[]}
+        canEdit={canEdit}
         // Dated export: the same "4–10 Aug 2026" range shown above the board,
         // plus a date per day column, and the week's Monday in the file name.
         exportSpec={{

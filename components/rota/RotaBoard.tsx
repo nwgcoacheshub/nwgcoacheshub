@@ -98,6 +98,12 @@ type ModalState = {
 /** Sentinel for the picker's "custom class" escape hatch. */
 const CUSTOM_CLASS = "__custom__";
 
+/** Returned by the coach-directory writes when canEdit is false. */
+const NO_EDIT_RIGHTS = "Your job title doesn't have rota edit rights.";
+
+/** Tooltip on the write controls that stay visible but disabled. */
+const NO_EDIT_TITLE = NO_EDIT_RIGHTS;
+
 const TIME_LABELS: number[] = [];
 for (let m = DAY_START; m <= DAY_START + SLOTS * SLOT_MIN; m += 60) {
   TIME_LABELS.push(m);
@@ -123,6 +129,7 @@ export default function RotaBoard({
   toolbarExtra,
   exportSpec,
   canManageCoaches = false,
+  canEdit = false,
 }: {
   dataSource: RotaDataSource;
   /** What this board is showing, for the empty note — a site or a week. */
@@ -150,6 +157,23 @@ export default function RotaBoard({
    * to the standard data source.
    */
   canManageCoaches?: boolean;
+  /**
+   * Whether this user may write rota data — resolved server-side from their
+   * profile by getCanEditRota(), mirroring public.can_edit_rota() in migration
+   * 0013. Distinct from canManageCoaches, which is about *which board this is*
+   * rather than who's looking; the "Manage coaches" entry point needs both.
+   *
+   * Defaults to false so a caller that forgets to pass it gets the read-only
+   * board rather than controls that fail at the database.
+   *
+   * This is presentation only — RLS is the real block. It matters because the
+   * two halves of that block behave differently: a rejected insert raises
+   * 42501 and `commit` rolls back, but a rejected update or delete matches zero
+   * rows and comes back as `{ error: null }`, which `commit` would treat as
+   * success. The optimistic edit would sit on screen until the next refresh and
+   * then vanish. Hiding the controls is what stops that being reachable.
+   */
+  canEdit?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -181,11 +205,17 @@ export default function RotaBoard({
   /**
    * Optimistic write: paint `next` immediately, then persist. If the write
    * fails, roll the board back to what it was and surface the message.
+   *
+   * Every roster and class mutation on this board funnels through here, so the
+   * canEdit guard is a single choke point behind the individual controls — if a
+   * write affordance is ever missed when gating, this still stops the optimistic
+   * paint that would otherwise silently revert on the next refresh.
    */
   async function commit(
     next: BoardData,
     write: () => PromiseLike<{ error: { message: string } | null }>
   ) {
+    if (!canEdit) return;
     const prev = dataRef.current;
     setError(null);
     applyData(next);
@@ -527,6 +557,7 @@ export default function RotaBoard({
 
   /** The picker's inline escape hatch: create a brand-new coach and add them in one step. */
   async function createCoachAndAddToDay(day: number, rawName: string) {
+    if (!canEdit) return;
     const name = rawName.trim();
     if (!name) return;
 
@@ -567,8 +598,13 @@ export default function RotaBoard({
    * site-scoped in both standard and weekly mode), so each rolls its own
    * `coaches` state back on failure and reports its error to the caller
    * instead of the board-level error banner.
+   *
+   * These three don't go through `commit`, so they carry their own canEdit
+   * guard. They return the refusal rather than swallowing it, because the
+   * modal they're called from surfaces whatever comes back.
    */
   async function addCoach(name: string): Promise<{ error: string | null }> {
+    if (!canEdit) return { error: NO_EDIT_RIGHTS };
     const trimmed = name.trim();
     if (!trimmed) return { error: "Enter a name." };
 
@@ -590,6 +626,7 @@ export default function RotaBoard({
     coachId: string,
     name: string
   ): Promise<{ error: string | null }> {
+    if (!canEdit) return { error: NO_EDIT_RIGHTS };
     const trimmed = name.trim();
     if (!trimmed) return { error: "Enter a name." };
 
@@ -611,6 +648,7 @@ export default function RotaBoard({
   }
 
   async function deactivateCoach(coachId: string): Promise<{ error: string | null }> {
+    if (!canEdit) return { error: NO_EDIT_RIGHTS };
     const prev = dataRef.current;
     applyData({
       ...prev,
@@ -874,7 +912,9 @@ export default function RotaBoard({
       : null;
 
   return (
-    <div className={`${styles.root} ${styles.fill}`}>
+    <div
+      className={`${styles.root} ${styles.fill}${canEdit ? "" : ` ${styles.readonly}`}`}
+    >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-5">
         <div className="text-[13px] text-slate-light">
           Each day is split into a column per coach working that day. Drag a class into a
@@ -892,7 +932,7 @@ export default function RotaBoard({
               categories={categories}
             />
           )}
-          {canManageCoaches && (
+          {canManageCoaches && canEdit && (
             <button
               className="btn btn-ghost toolbar-btn"
               style={{ border: "1px solid var(--line)" }}
@@ -901,11 +941,26 @@ export default function RotaBoard({
               Manage coaches
             </button>
           )}
-          <button className="add-btn toolbar-btn" onClick={openAddModal}>
+          <button
+            className="add-btn toolbar-btn"
+            disabled={!canEdit}
+            title={canEdit ? undefined : NO_EDIT_TITLE}
+            onClick={openAddModal}
+          >
             + Add class
           </button>
         </div>
       </div>
+
+      {/* The banner, not the per-control tooltips, is what makes this
+          discoverable: a coach who can't drag a shift can see why without
+          having to hover the one control they were reaching for. */}
+      {!canEdit && (
+        <div className="mx-5 mb-3 rounded-lg border border-line bg-background px-3.5 py-2 text-[13px] text-slate">
+          Read-only — your job title doesn&apos;t have rota edit rights. Contact an
+          admin if something here needs changing.
+        </div>
+      )}
 
       {error && (
         <div className="board-error">
@@ -936,6 +991,8 @@ export default function RotaBoard({
                   <div className="day-head-actions">
                     <button
                       className="add-coach-btn"
+                      disabled={!canEdit}
+                      title={canEdit ? undefined : NO_EDIT_TITLE}
                       onClick={(e) => openCoachPicker(d, e)}
                     >
                       + coach
@@ -962,6 +1019,10 @@ export default function RotaBoard({
                         className={`cname ${statusClass}`}
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Everything in the popover is a write, and the
+                          // badges it would explain (🔑 ⭐ 💰) are already on
+                          // this pill — so read-only users don't open it.
+                          if (!canEdit) return;
                           const rect = e.currentTarget.getBoundingClientRect();
                           setPopover({
                             day: d,
@@ -988,14 +1049,16 @@ export default function RotaBoard({
                           </span>
                         )}
                       </button>
-                      <button
-                        type="button"
-                        className="cremove"
-                        title="Remove column"
-                        onClick={() => removeCoachFromDay(d, row.coach_id)}
-                      >
-                        ×
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="cremove"
+                          title="Remove column"
+                          onClick={() => removeCoachFromDay(d, row.coach_id)}
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -1031,15 +1094,24 @@ export default function RotaBoard({
                         gridRow: `3 / span ${SLOTS}`,
                         position: "relative",
                       }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                        e.currentTarget.classList.add("dropzone-hover");
-                      }}
-                      onDragLeave={(e) =>
-                        e.currentTarget.classList.remove("dropzone-hover")
+                      // Read-only boards don't accept a drop at all: without
+                      // preventDefault on dragover the browser never treats
+                      // this as a drop target.
+                      onDragOver={
+                        canEdit
+                          ? (e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "move";
+                              e.currentTarget.classList.add("dropzone-hover");
+                            }
+                          : undefined
                       }
-                      onDrop={(e) => onZoneDrop(e, d, row.coach_id)}
+                      onDragLeave={
+                        canEdit
+                          ? (e) => e.currentTarget.classList.remove("dropzone-hover")
+                          : undefined
+                      }
+                      onDrop={canEdit ? (e) => onZoneDrop(e, d, row.coach_id) : undefined}
                     >
                       {dayClasses
                         .filter((ev) => (lanes.get(ev.id) ?? 0) === lane)
@@ -1061,33 +1133,44 @@ export default function RotaBoard({
                                 top: topPx(ev.start_mins),
                                 height: spanSlots * SLOT_PX - 2,
                               }}
-                              draggable
-                              onDragStart={(e) => {
-                                e.currentTarget.classList.add("dragging");
-                                grabOffsetY.current =
-                                  e.clientY -
-                                  e.currentTarget.getBoundingClientRect().top;
-                                e.dataTransfer.setData(
-                                  "text/plain",
-                                  JSON.stringify({ type: "class", id: ev.id })
-                                );
-                                e.dataTransfer.effectAllowed = "move";
-                              }}
-                              onDragEnd={(e) =>
-                                e.currentTarget.classList.remove("dragging")
+                              draggable={canEdit}
+                              onDragStart={
+                                canEdit
+                                  ? (e) => {
+                                      e.currentTarget.classList.add("dragging");
+                                      grabOffsetY.current =
+                                        e.clientY -
+                                        e.currentTarget.getBoundingClientRect().top;
+                                      e.dataTransfer.setData(
+                                        "text/plain",
+                                        JSON.stringify({ type: "class", id: ev.id })
+                                      );
+                                      e.dataTransfer.effectAllowed = "move";
+                                    }
+                                  : undefined
                               }
-                              onClick={() => openEditModal(ev)}
+                              onDragEnd={
+                                canEdit
+                                  ? (e) => e.currentTarget.classList.remove("dragging")
+                                  : undefined
+                              }
+                              // The modal is an editor, so read-only users
+                              // don't open it. The card already carries the
+                              // title, times and coach.
+                              onClick={canEdit ? () => openEditModal(ev) : undefined}
                             >
-                              <div
-                                className="delete"
-                                title="Delete"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteClass(ev.id);
-                                }}
-                              >
-                                ×
-                              </div>
+                              {canEdit && (
+                                <div
+                                  className="delete"
+                                  title="Delete"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteClass(ev.id);
+                                  }}
+                                >
+                                  ×
+                                </div>
+                              )}
                               {isCover && <div className="cover-badge">COVER</div>}
                               <div className="title">{ev.title}</div>
                               <div className="meta">
@@ -1146,26 +1229,32 @@ export default function RotaBoard({
                           key={edge}
                           className={`shift-marker ${cls}`}
                           style={{ top: topPx(atMins) - 9, pointerEvents: "auto" }}
-                          draggable
-                          onDragStart={(e) => {
-                            e.currentTarget.classList.add("dragging");
-                            grabOffsetY.current =
-                              e.clientY -
-                              e.currentTarget.getBoundingClientRect().top -
-                              9;
-                            e.dataTransfer.setData(
-                              "text/plain",
-                              JSON.stringify({
-                                type: "shift",
-                                day: d,
-                                coachId: row.coach_id,
-                                edge,
-                              })
-                            );
-                            e.dataTransfer.effectAllowed = "move";
-                          }}
-                          onDragEnd={(e) =>
-                            e.currentTarget.classList.remove("dragging")
+                          draggable={canEdit}
+                          onDragStart={
+                            canEdit
+                              ? (e) => {
+                                  e.currentTarget.classList.add("dragging");
+                                  grabOffsetY.current =
+                                    e.clientY -
+                                    e.currentTarget.getBoundingClientRect().top -
+                                    9;
+                                  e.dataTransfer.setData(
+                                    "text/plain",
+                                    JSON.stringify({
+                                      type: "shift",
+                                      day: d,
+                                      coachId: row.coach_id,
+                                      edge,
+                                    })
+                                  );
+                                  e.dataTransfer.effectAllowed = "move";
+                                }
+                              : undefined
+                          }
+                          onDragEnd={
+                            canEdit
+                              ? (e) => e.currentTarget.classList.remove("dragging")
+                              : undefined
                           }
                         >
                           {(edge === "start" ? "Start " : "Finish ") +
@@ -1193,8 +1282,9 @@ export default function RotaBoard({
 
       {roster.length === 0 && (
         <div className="empty-note">
-          No rota saved for {scopeLabel} yet — use “+ coach” on a day to start building
-          it.
+          {canEdit
+            ? `No rota saved for ${scopeLabel} yet — use “+ coach” on a day to start building it.`
+            : `No rota saved for ${scopeLabel} yet.`}
         </div>
       )}
 
@@ -1313,7 +1403,7 @@ export default function RotaBoard({
         </div>
       )}
 
-      {manageCoachesOpen && canManageCoaches && (
+      {manageCoachesOpen && canManageCoaches && canEdit && (
         <ManageCoachesModal
           coaches={activeCoaches}
           daysByCoach={standardDaysByCoach}

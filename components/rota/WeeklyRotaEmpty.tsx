@@ -14,6 +14,7 @@ export default function WeeklyRotaEmpty({
   siteName,
   weekStart,
   weekRange,
+  canEdit,
 }: {
   siteId: string;
   siteName: string;
@@ -21,6 +22,12 @@ export default function WeeklyRotaEmpty({
   weekStart: string;
   /** Same week, for reading, e.g. "4–10 Aug 2026". */
   weekRange: string;
+  /**
+   * Resolved server-side by getCanEditRota(). upsert_weekly_rota carries the
+   * same job_title check since migration 0013, so generating is blocked for a
+   * Coach-level account whether or not this button is offered.
+   */
+  canEdit: boolean;
 }) {
   const { generate, pending, error, dismissError } = useGenerateWeek(siteId, weekStart);
 
@@ -40,11 +47,20 @@ export default function WeeklyRotaEmpty({
           No rota generated for this week yet
         </h2>
         <p className="mt-2 text-sm text-slate">
-          {siteName} doesn&apos;t have a rota built for the week of {weekRange}. Generate
-          one from the current Standard Rota template to get started.
+          {siteName} doesn&apos;t have a rota built for the week of {weekRange}.{" "}
+          {canEdit
+            ? "Generate one from the current Standard Rota template to get started."
+            : "Ask a Lead Coach or an admin to generate it from the Standard Rota template."}
         </p>
         <div className="mt-4 flex">
-          <button className="add-btn" disabled={pending} onClick={() => generate()}>
+          <button
+            className="add-btn"
+            disabled={pending || !canEdit}
+            title={
+              canEdit ? undefined : "Your job title doesn't have rota edit rights."
+            }
+            onClick={() => generate()}
+          >
             {pending ? "Generating…" : "Generate this week's rota"}
           </button>
         </div>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
+import { getCanEditRota } from "@/lib/rota/canEdit";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
 import RotaViewTabs from "@/components/rota/RotaViewTabs";
@@ -31,6 +32,12 @@ export default async function RotaSitePage({
   if (!site) {
     redirect(`/rota/${access.homeSlug}`);
   }
+
+  // Which sites you may see and whether you may write are separate questions —
+  // the same split migration 0013 makes, where the job_title check and the site
+  // match are separate conjuncts. getCurrentProfile() is cached per request, so
+  // this reuses the profile getSiteAccess() already read.
+  const canEdit = await getCanEditRota();
 
   const supabase = await createClient();
 
@@ -104,6 +111,7 @@ export default async function RotaSitePage({
         initialCoaches={(coachesRes.data ?? []) as Coach[]}
         initialRoster={(rosterRes.data ?? []) as RosterRow[]}
         initialClasses={(classesRes.data ?? []) as ClassRow[]}
+        canEdit={canEdit}
         // `week: null` is what makes this the undated export: no date range in
         // the header, no dates on the day columns, and a file name that says
         // template rather than naming a week.

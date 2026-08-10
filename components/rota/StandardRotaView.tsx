@@ -27,6 +27,7 @@ export default function StandardRotaView({
   initialRoster,
   initialClasses,
   exportSpec,
+  canEdit,
 }: {
   siteId: string;
   siteName: string;
@@ -36,6 +37,8 @@ export default function StandardRotaView({
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
   exportSpec: RotaExportSpec;
+  /** Resolved server-side by getCanEditRota(); passed straight through. */
+  canEdit: boolean;
 }) {
   const dataSource = useMemo(() => standardDataSource(siteId), [siteId]);
 
@@ -51,6 +54,7 @@ export default function StandardRotaView({
       initialClasses={initialClasses}
       exportSpec={exportSpec}
       canManageCoaches
+      canEdit={canEdit}
     />
   );
 }

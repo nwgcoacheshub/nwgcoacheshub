@@ -34,6 +34,7 @@ export default function WeeklyRotaBoard({
   initialRoster,
   initialClasses,
   exportSpec,
+  canEdit,
 }: {
   siteId: string;
   siteName: string;
@@ -48,6 +49,13 @@ export default function WeeklyRotaBoard({
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
   exportSpec: RotaExportSpec;
+  /**
+   * Resolved server-side by getCanEditRota(). Gates regeneration as well as the
+   * board itself: migration 0013 added the same job_title check inside
+   * upsert_weekly_rota, so a Coach-level account is rejected by the RPC before
+   * any row is touched.
+   */
+  canEdit: boolean;
 }) {
   const dataSource = useMemo(() => weeklyDataSource(weeklyRotaId), [weeklyRotaId]);
   const { generate, pending, error, dismissError } = useGenerateWeek(siteId, weekStart);
@@ -61,6 +69,7 @@ export default function WeeklyRotaBoard({
   }
 
   async function confirmRegenerate() {
+    if (!canEdit) return;
     // Left open on failure so the error is next to the action that caused it.
     if (await generate()) setConfirming(false);
   }
@@ -78,8 +87,16 @@ export default function WeeklyRotaBoard({
         initialRoster={initialRoster}
         initialClasses={initialClasses}
         exportSpec={exportSpec}
+        canEdit={canEdit}
         toolbarExtra={
-          <button className="btn btn-danger" onClick={() => setConfirming(true)}>
+          <button
+            className="btn btn-danger"
+            disabled={!canEdit}
+            title={
+              canEdit ? undefined : "Your job title doesn't have rota edit rights."
+            }
+            onClick={() => setConfirming(true)}
+          >
             Regenerate from Standard Rota
           </button>
         }
