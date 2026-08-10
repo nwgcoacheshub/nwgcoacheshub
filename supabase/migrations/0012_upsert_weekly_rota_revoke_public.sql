@@ -1,0 +1,36 @@
+-- NWG Coaches Hub — Rota Tool, security follow-up (completes 0011)
+-- Closes the PUBLIC grant on upsert_weekly_rota() and declares the
+-- authenticated grant explicitly.
+--
+-- 0011 was incomplete. A function in this project can be reachable by anon down
+-- two independent paths, and closing either one alone leaves the other open:
+--
+--   1. Postgres grants EXECUTE to PUBLIC on every newly created function.
+--   2. Supabase adds `alter default privileges in schema public grant all on
+--      functions to anon, authenticated, service_role`, a direct grant to anon.
+--
+-- 0011 revoked only the second. Confirmed live afterwards: an anon call still
+-- reached the function body and came back with its own P0001 authorization
+-- error rather than a 42501 permission denied, which is what a closed grant
+-- looks like. resolve_profile_names() was only actually closed because it
+-- happened to collect both revokes — PUBLIC in 0008, anon in 0010.
+--
+-- So the rule for any future security-definer function here is both revokes,
+-- not one.
+--
+-- The second statement is not redundant tidying. authenticated's access to this
+-- function was inherited from Supabase's default privileges rather than
+-- declared anywhere, and revoking PUBLIC out from under an inherited grant is
+-- not something to leave to assumption — the Generate-week button depends on
+-- it. Granting explicitly makes it certain and matches how 0008 declares the
+-- same thing for resolve_profile_names().
+--
+-- Both statements were run directly against the live database before this file
+-- was written; it exists so a fresh checkout reaches the same state. Re-running
+-- is harmless — revoking an absent grant and re-granting a present one are both
+-- no-ops.
+--
+-- The function body, including its own admin-or-own-site check, is untouched.
+
+revoke execute on function public.upsert_weekly_rota(uuid, date) from public;
+grant execute on function public.upsert_weekly_rota(uuid, date) to authenticated;
