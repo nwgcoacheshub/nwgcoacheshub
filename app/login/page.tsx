@@ -15,11 +15,7 @@ export default function LoginPage() {
         <div className="mb-2 text-center text-[26px] font-extrabold leading-[1.25] tracking-[0.2px]">
           <span className="text-orange">NWG</span> <span className="text-slate-dark">Coaches Hub</span>
         </div>
-        <div className="mb-8 text-center text-sm text-slate-light">
-          Sign in to manage your locations
-        </div>
-
-        <form action={formAction} className="flex flex-col gap-[18px]">
+        <form action={formAction} className="mt-8 flex flex-col gap-[18px]">
           <div>
             <label htmlFor="email" className="mb-1.5 block text-[13px] font-semibold text-slate-dark">
               Email
@@ -53,11 +49,6 @@ export default function LoginPage() {
               {error}
             </p>
           )}
-
-          <label className="flex items-center gap-1.5 text-[13px] text-slate-dark">
-            <input type="checkbox" name="remember" className="accent-orange" />
-            Remember me
-          </label>
 
           <button
             type="submit"

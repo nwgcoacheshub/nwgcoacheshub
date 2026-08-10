@@ -120,7 +120,8 @@ title + subtitle) and rows (name + status pill, href="#"):
   "Renewal overdue" / Action (red/orange), CPD hours / "6 of 12 this year" / On track
   (green)
 
-**Footer:** small text "NWG Coaches Hub · v1 dashboard", log out link.
+**Footer:** small text "© 2026 The Gymnastics Blueprint. All rights reserved." (matches
+the login page's copyright line), log out link.
 
 Everything above except the greeting, the two badges, and Admin nav-item visibility is
 hardcoded placeholder content — no database tables, no fetching, just static markup.

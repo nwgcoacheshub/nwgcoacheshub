@@ -38,9 +38,7 @@ export default async function ProtectedLayout({
       />
       <div className="app-main flex-1">{children}</div>
       <footer className="app-footer mx-auto flex w-full max-w-[1280px] flex-wrap justify-between gap-2.5 px-6 py-6 text-xs text-slate-light">
-        <div>
-          NWG Coaches Hub · <b className="text-slate">Coaching intranet</b>
-        </div>
+        <div>© 2026 The Gymnastics Blueprint. All rights reserved.</div>
         <div>
           <a href="/auth/signout" className="font-semibold text-slate">
             Log out
