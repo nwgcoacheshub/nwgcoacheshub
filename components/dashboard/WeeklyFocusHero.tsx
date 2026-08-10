@@ -1,3 +1,6 @@
+import { createClient } from "@/lib/supabaseServer";
+import { londonToday } from "@/lib/rota/week";
+
 function ArrowIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -6,7 +9,23 @@ function ArrowIcon() {
   );
 }
 
-export default function WeeklyFocusHero() {
+function QuoteIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path d="M7 8c-1.7 0-3 1.3-3 3v5h5v-5H6c0-1.1.9-2 2-2V8zm10 0c-1.7 0-3 1.3-3 3v5h5v-5h-3c0-1.1.9-2 2-2V8z" />
+    </svg>
+  );
+}
+
+export default async function WeeklyFocusHero() {
+  const supabase = await createClient();
+  const currentMonth = londonToday().getUTCMonth() + 1;
+  const { data: mantra } = await supabase
+    .from("mantras")
+    .select("mantra_text")
+    .eq("month_number", currentMonth)
+    .maybeSingle();
+
   return (
     <>
       <div className="mb-3 ml-0.5 flex items-center gap-2 text-xs font-bold uppercase tracking-[1.2px] text-slate-light">
@@ -30,6 +49,20 @@ export default function WeeklyFocusHero() {
           </div>
           <div className="text-[13px] font-semibold text-slate-light">Same across all clubs</div>
         </div>
+
+        {mantra?.mantra_text && (
+          <div className="flex items-start gap-2.5 border-b border-line bg-white px-5 py-3.5">
+            <span className="mt-0.5 shrink-0 text-orange">
+              <QuoteIcon />
+            </span>
+            <div>
+              <div className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-orange">
+                Mantra of the month
+              </div>
+              <p className="text-[14px] font-semibold text-ink">{mantra.mantra_text}</p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2">
           <div className="p-5">
