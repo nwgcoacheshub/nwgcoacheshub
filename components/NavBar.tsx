@@ -117,9 +117,16 @@ function NavDropdown({
 export default function NavBar({
   isAdmin,
   fullName,
+  clubSites,
 }: {
   isAdmin: boolean;
   fullName: string;
+  /**
+   * Sites the current user may open a Club Profile for, from rota_sites via
+   * getSiteAccess(). Head Office isn't among them — it has no rota_sites row
+   * and no Club Profile page.
+   */
+  clubSites: { id: string; name: string; slug: string }[];
 }) {
   const pathname = usePathname();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -228,16 +235,14 @@ export default function NavBar({
               </svg>
             }
             label="Club Profile"
-            items={[
-              { label: "Burnley", disabled: true },
-              { label: "Coventry", disabled: true },
-              { label: "Leeds", disabled: true },
-              { label: "Mansfield", disabled: true },
-              { label: "Rotherham", disabled: true },
-              { label: "Wirral", disabled: true },
-              { label: "Wolverhampton", disabled: true },
-              { label: "Head Office", disabled: true },
-            ]}
+            items={
+              clubSites.length > 0
+                ? clubSites.map((site) => ({
+                    label: site.name,
+                    href: `/club-profile/${site.slug}`,
+                  }))
+                : [{ label: "No sites available", disabled: true as const }]
+            }
           />
           <NavDropdown
             id="gymnastics"

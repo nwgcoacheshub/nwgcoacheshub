@@ -1,12 +1,18 @@
-export default function ClubProfilePage() {
-  return (
-    <main className="mx-auto max-w-[1280px] p-6">
-      <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-[26px] font-extrabold tracking-[-0.3px] text-slate-dark">Club Profile</h1>
-        <div className="text-[13px] text-slate-light">
-          Home / <b className="font-bold text-orange">Club Profile</b>
-        </div>
-      </div>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { getSiteAccess } from "@/lib/rota/siteAccess";
+import ClubProfileUnavailable from "@/components/clubProfile/ClubProfileUnavailable";
+
+/**
+ * /club-profile has no site of its own — send people to one they can actually
+ * see: admins to the first site by sort_order, coaches to their own. Same
+ * shape as /rota's index redirect.
+ */
+export default async function ClubProfileIndexPage() {
+  const access = await getSiteAccess();
+
+  if (!access.ok) {
+    return <ClubProfileUnavailable access={access} />;
+  }
+
+  redirect(`/club-profile/${access.homeSlug}`);
 }
