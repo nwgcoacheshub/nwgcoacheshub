@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { ROLES, JOB_TITLES, SITES, type Role, type JobTitle, type Site } from "@/lib/profileOptions";
+import Modal from "@/components/Modal";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+  rowActionClass,
+} from "@/components/formStyles";
 
 type Profile = {
   id: string;
@@ -14,15 +22,6 @@ type Profile = {
   active: boolean;
 };
 
-const inputClass =
-  "w-full rounded-lg border border-line bg-white px-2.5 py-1.5 text-sm text-ink placeholder:text-slate-light focus:border-orange focus:outline-none";
-const labelClass = "mb-1.5 block text-[12.5px] font-semibold text-slate-dark";
-const primaryButtonClass =
-  "rounded-lg bg-orange px-3.5 py-2 text-[13px] font-bold text-white hover:bg-orange-dark disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButtonClass =
-  "rounded-lg border border-line bg-white px-3.5 py-2 text-[13px] font-bold text-slate-dark hover:bg-background";
-const rowActionClass = "rounded-md border border-line bg-white px-2 py-1 text-xs font-semibold text-slate-dark hover:bg-background disabled:cursor-not-allowed disabled:opacity-60";
-
 function StatusPill({ active }: { active: boolean }) {
   return (
     <span
@@ -32,30 +31,6 @@ function StatusPill({ active }: { active: boolean }) {
     >
       {active ? "Active" : "Inactive"}
     </span>
-  );
-}
-
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-card bg-card p-6 shadow-card">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-bold text-ink">{title}</h2>
-          <button onClick={onClose} className="text-slate-light hover:text-slate-dark" aria-label="Close">
-            ✕
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
   );
 }
 
