@@ -9,9 +9,17 @@ function ArrowIcon() {
   );
 }
 
-function QuoteIcon() {
+function QuoteIcon({ className }: { className?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      className={className}
+    >
       <path d="M7 8c-1.7 0-3 1.3-3 3v5h5v-5H6c0-1.1.9-2 2-2V8zm10 0c-1.7 0-3 1.3-3 3v5h5v-5h-3c0-1.1.9-2 2-2V8z" />
     </svg>
   );
@@ -51,16 +59,15 @@ export default async function WeeklyFocusHero() {
         </div>
 
         {mantra?.mantra_text && (
-          <div className="flex items-start gap-2.5 border-b border-line bg-white px-5 py-3.5">
-            <span className="mt-0.5 shrink-0 text-orange">
-              <QuoteIcon />
-            </span>
-            <div>
-              <div className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-orange">
-                Mantra of the month
-              </div>
-              <p className="text-[14px] font-semibold text-ink">{mantra.mantra_text}</p>
+          <div className="border-b border-line bg-white px-5 py-3.5">
+            <div className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-orange">
+              Mantra of the month
             </div>
+            <p className="flex items-start gap-1.5 text-[19px] font-bold text-ink">
+              <QuoteIcon className="mt-0.5 shrink-0 text-orange" />
+              <span>{mantra.mantra_text}</span>
+              <QuoteIcon className="mt-0.5 shrink-0 rotate-180 text-orange" />
+            </p>
           </div>
         )}
 
