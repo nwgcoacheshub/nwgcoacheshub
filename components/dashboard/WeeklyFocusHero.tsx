@@ -59,11 +59,11 @@ export default async function WeeklyFocusHero() {
         </div>
 
         {mantra?.mantra_text && (
-          <div className="border-b border-line bg-white px-5 py-3.5">
+          <div className="border-b border-line bg-white px-5 py-3.5 text-center">
             <div className="mb-1 text-[11.5px] font-bold uppercase tracking-wide text-orange">
               Mantra of the month
             </div>
-            <p className="flex items-start gap-1.5 text-[19px] font-bold text-ink">
+            <p className="flex items-start justify-center gap-1.5 text-[19px] font-bold text-ink">
               <QuoteIcon className="mt-0.5 shrink-0 text-orange" />
               <span>{mantra.mantra_text}</span>
               <QuoteIcon className="mt-0.5 shrink-0 rotate-180 text-orange" />
