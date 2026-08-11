@@ -169,3 +169,14 @@ export function weeklyDataSource(weeklyRotaId: string): RotaDataSource {
     weekly_rota_id: weeklyRotaId,
   });
 }
+
+/**
+ * The site's one-off Restructure snapshot. Same isolation as a generated
+ * week — edits land only on the restructure tables, never the Standard Rota
+ * it was copied from — but scoped by restructure_id rather than a date.
+ */
+export function restructureDataSource(restructureId: string): RotaDataSource {
+  return makeDataSource("rota_restructure_roster", "rota_restructure_classes", {
+    restructure_id: restructureId,
+  });
+}

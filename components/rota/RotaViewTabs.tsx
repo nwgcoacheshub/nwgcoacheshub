@@ -11,11 +11,12 @@ export default function RotaViewTabs({
   active,
 }: {
   siteSlug: string;
-  active: "standard" | "week";
+  active: "standard" | "week" | "restructure";
 }) {
   const tabs = [
     { key: "standard", label: "Standard rota", href: `/rota/${siteSlug}` },
     { key: "week", label: "This week", href: `/rota/${siteSlug}/week` },
+    { key: "restructure", label: "Restructure", href: `/rota/${siteSlug}/restructure` },
   ] as const;
 
   return (
