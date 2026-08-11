@@ -12,6 +12,8 @@ import {
   DIVIDER_W,
   DURATION_OPTIONS,
   HOUR_PX,
+  MAX_DURATION_MINS,
+  MIN_CUSTOM_DURATION_MINS,
   MIN_SHIFT_MINS,
   SLOTS,
   SLOT_MIN,
@@ -93,10 +95,18 @@ type ModalState = {
   setCoachId: string;
   startMins: number;
   durationMins: number;
+  // Whether the duration field is showing the free-entry "Custom…" input
+  // rather than the preset dropdown. Kept separate from durationMins itself
+  // so picking "Custom…" doesn't get silently reinterpreted as a preset just
+  // because the typed value happens to match one.
+  durationCustom: boolean;
 };
 
 /** Sentinel for the picker's "custom class" escape hatch. */
 const CUSTOM_CLASS = "__custom__";
+
+/** Sentinel for the duration picker's "Custom…" escape hatch. */
+const CUSTOM_DURATION = "__custom_duration__";
 
 /** Returned by the coach-directory writes when canEdit is false. */
 const NO_EDIT_RIGHTS = "Your job title doesn't have rota edit rights.";
@@ -739,6 +749,16 @@ export default function RotaBoard({
       setError("Choose a colour for this class.");
       return;
     }
+    if (
+      !Number.isInteger(modal.durationMins) ||
+      modal.durationMins < MIN_CUSTOM_DURATION_MINS ||
+      modal.durationMins > MAX_DURATION_MINS
+    ) {
+      setError(
+        `Duration must be a whole number of minutes between ${MIN_CUSTOM_DURATION_MINS} and ${MAX_DURATION_MINS}.`
+      );
+      return;
+    }
 
     const current = dataRef.current;
     // Non-cover is stored as a null set_coach_id, same as every existing row —
@@ -791,6 +811,7 @@ export default function RotaBoard({
       setCoachId: coachId,
       startMins: DAY_START,
       durationMins: 60,
+      durationCustom: false,
     });
   }
 
@@ -810,6 +831,9 @@ export default function RotaBoard({
       setCoachId: ev.set_coach_id ?? ev.coach_id,
       startMins: ev.start_mins,
       durationMins: ev.duration_mins,
+      // A duration that doesn't match any preset exactly opens as custom with
+      // its real value shown, rather than snapping to the nearest preset.
+      durationCustom: !DURATION_OPTIONS.some((o) => o.value === ev.duration_mins),
     });
   }
 
@@ -844,6 +868,9 @@ export default function RotaBoard({
       title: item.title,
       categoryKey: item.category_key,
       durationMins: item.default_duration_mins,
+      durationCustom: !DURATION_OPTIONS.some(
+        (o) => o.value === item.default_duration_mins
+      ),
     };
   }
 
@@ -1574,17 +1601,50 @@ export default function RotaBoard({
                 <label htmlFor="f-dur">Duration</label>
                 <select
                   id="f-dur"
-                  value={modal.durationMins}
-                  onChange={(e) =>
-                    setModal({ ...modal, durationMins: parseInt(e.target.value, 10) })
-                  }
+                  value={modal.durationCustom ? CUSTOM_DURATION : modal.durationMins}
+                  onChange={(e) => {
+                    if (e.target.value === CUSTOM_DURATION) {
+                      setModal({ ...modal, durationCustom: true });
+                    } else {
+                      setModal({
+                        ...modal,
+                        durationCustom: false,
+                        durationMins: parseInt(e.target.value, 10),
+                      });
+                    }
+                  }}
                 >
                   {DURATION_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
+                  <option value={CUSTOM_DURATION}>Custom…</option>
                 </select>
+                {modal.durationCustom && (
+                  <>
+                    <input
+                      id="f-dur-custom"
+                      type="number"
+                      inputMode="numeric"
+                      min={MIN_CUSTOM_DURATION_MINS}
+                      max={MAX_DURATION_MINS}
+                      step={1}
+                      placeholder="Minutes"
+                      value={modal.durationMins || ""}
+                      onChange={(e) => {
+                        const parsed = parseInt(e.target.value, 10);
+                        setModal({
+                          ...modal,
+                          durationMins: Number.isNaN(parsed) ? 0 : parsed,
+                        });
+                      }}
+                    />
+                    <div className="field-hint">
+                      Whole minutes, {MIN_CUSTOM_DURATION_MINS}–{MAX_DURATION_MINS}.
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

@@ -46,6 +46,12 @@ export const DURATION_OPTIONS = [
   { value: 300, label: "5 hr" },
 ];
 
+// Bounds for the duration modal's "Custom…" free-entry escape hatch. The
+// ceiling deliberately matches the top preset rather than introducing a
+// separate limit.
+export const MIN_CUSTOM_DURATION_MINS = 5;
+export const MAX_DURATION_MINS = Math.max(...DURATION_OPTIONS.map((o) => o.value));
+
 export type CoachStatus = "working" | "leave" | "sick";
 
 /** Minutes from midnight -> px from the top of a day column. */
