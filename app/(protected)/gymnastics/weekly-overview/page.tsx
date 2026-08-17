@@ -53,11 +53,11 @@ export default async function WeeklyOverviewPage() {
   const [{ data: gymnasticsRows }, { data: preschoolRows }] = await Promise.all([
     supabase
       .from("programme_gymnastics_weeks")
-      .select("week_commencing, warm_up, skill_focus")
+      .select("week_commencing, week_number, rotation, warm_up, skill_focus")
       .order("week_commencing", { ascending: true }),
     supabase
       .from("programme_preschool_weeks")
-      .select("week_commencing, mini_theme")
+      .select("week_commencing, week_number, category, mini_theme")
       .order("week_commencing", { ascending: true }),
   ]);
 
@@ -74,7 +74,7 @@ export default async function WeeklyOverviewPage() {
 
   const months = new Map<string, MonthGroup>();
 
-  allWeekCommencing.forEach((weekCommencing, index) => {
+  allWeekCommencing.forEach((weekCommencing) => {
     const monday = parseWeekDate(weekCommencing);
     if (!monday) return;
 
@@ -82,12 +82,20 @@ export default async function WeeklyOverviewPage() {
     const preschool = preschoolByWeek.get(weekCommencing);
     const monthKey = weekCommencing.slice(0, 7);
 
+    // Gymnastics week_number is the source of truth for the row label — it's
+    // what's driven the "Week X" pattern throughout this feature. Only falls
+    // back to the pre-school cycle's own numbering on weeks with no
+    // gymnastics row at all.
+    const weekNumber = gymnastics?.week_number ?? preschool?.week_number ?? null;
+
     const row: WeekRow = {
       weekCommencing,
-      weekLabel: `Week ${index + 1}`,
+      weekLabel: weekNumber != null ? `${weekNumber}` : "—",
       wcLabel: wcLabel(monday),
+      rotation: gymnastics?.rotation ?? null,
       warmUp: gymnastics?.warm_up ?? null,
       skillFocus: gymnastics?.skill_focus ?? null,
+      category: preschool?.category ?? null,
       miniTheme: preschool?.mini_theme ?? null,
     };
 

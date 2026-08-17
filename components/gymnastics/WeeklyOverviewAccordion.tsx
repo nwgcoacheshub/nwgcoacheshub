@@ -6,8 +6,10 @@ export type WeekRow = {
   weekCommencing: string;
   weekLabel: string;
   wcLabel: string;
+  rotation: number | null;
   warmUp: string | null;
   skillFocus: string | null;
+  category: string | null;
   miniTheme: string | null;
 };
 
@@ -78,9 +80,10 @@ export default function WeeklyOverviewAccordion({
                 <div className="overflow-x-auto border-t border-line">
                   <table className="w-full text-left text-[13px]">
                     <thead>
-                      <tr className="text-xs font-bold uppercase tracking-wide text-slate-light">
-                        <th className="whitespace-nowrap px-5 py-2.5">Week</th>
-                        <th className="whitespace-nowrap px-3 py-2.5">W/c</th>
+                      <tr className="text-center text-xs font-bold uppercase tracking-wide text-slate-light">
+                        <th className="whitespace-nowrap px-5 py-2.5">W/c</th>
+                        <th className="whitespace-nowrap px-3 py-2.5">Week</th>
+                        <th className="whitespace-nowrap px-3 py-2.5">Rotation</th>
                         <th className="px-3 py-2.5">Warm up</th>
                         <th className="px-3 py-2.5">Skill focus</th>
                         <th className="px-3 py-2.5">Pre-school theme</th>
@@ -92,15 +95,29 @@ export default function WeeklyOverviewAccordion({
                         return (
                           <tr
                             key={row.weekCommencing}
-                            className={`border-t border-line ${isCurrent ? "bg-orange-pale" : ""}`}
+                            className={`border-t border-line text-center ${isCurrent ? "bg-orange-pale" : ""}`}
                           >
                             <td className="whitespace-nowrap px-5 py-2.5 font-semibold text-ink">
-                              {row.weekLabel}
+                              {row.wcLabel}
                             </td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-slate">{row.wcLabel}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-slate">{row.weekLabel}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5 text-slate">
+                              {row.rotation ?? "—"}
+                            </td>
                             <td className="px-3 py-2.5 text-slate">{row.warmUp ?? "—"}</td>
                             <td className="px-3 py-2.5 text-slate">{row.skillFocus ?? "—"}</td>
-                            <td className="px-3 py-2.5 text-slate">{row.miniTheme ?? "—"}</td>
+                            <td className="px-3 py-2.5 text-slate">
+                              {row.category || row.miniTheme ? (
+                                <div className="flex flex-col gap-0.5">
+                                  {row.category && (
+                                    <span className="font-semibold text-ink">{row.category}</span>
+                                  )}
+                                  {row.miniTheme && <span className="text-slate-light">{row.miniTheme}</span>}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
                           </tr>
                         );
                       })}

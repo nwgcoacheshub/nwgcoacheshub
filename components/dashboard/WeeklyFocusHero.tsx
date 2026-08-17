@@ -38,7 +38,7 @@ export default async function WeeklyFocusHero() {
 
   const { data: gymnasticsWeek } = await supabase
     .from("programme_gymnastics_weeks")
-    .select("warm_up, skill_focus, rotation")
+    .select("warm_up, skill_focus, rotation, week_number")
     .eq("week_commencing", weekCommencing)
     .maybeSingle();
 
@@ -56,6 +56,7 @@ export default async function WeeklyFocusHero() {
     .limit(1)
     .maybeSingle();
 
+  const thisMondayLabel = weekDayLabels(parseWeekDate(weekCommencing)!)[0];
   const preschoolWeekNumber = preschoolWeek?.week_number ?? null;
   const nextPreschoolMonday = nextPreschoolWeek ? parseWeekDate(nextPreschoolWeek.week_commencing) : null;
   const nextPreschoolLabel = nextPreschoolMonday ? weekDayLabels(nextPreschoolMonday)[0] : null;
@@ -79,9 +80,8 @@ export default async function WeeklyFocusHero() {
                 <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
             </span>
-            Week commencing 27 July
+            Week commencing {thisMondayLabel}
           </div>
-          <div className="text-[13px] font-semibold text-slate-light">Same across all clubs</div>
         </div>
 
         {mantra?.mantra_text && (
@@ -105,13 +105,17 @@ export default async function WeeklyFocusHero() {
             {gymnasticsWeek ? (
               <>
                 <h3 className="mb-[5px] text-[19px] font-bold text-ink">
-                  {gymnasticsWeek.skill_focus}
+                  Week {gymnasticsWeek.week_number}
                 </h3>
-                <p className="mb-3.5 text-[13.5px] text-slate">
-                  Warm-up: {gymnasticsWeek.warm_up}
-                  {gymnasticsWeek.rotation != null && <> · Rotation {gymnasticsWeek.rotation}</>}
-                </p>
-                <a href="#" className="inline-flex items-center gap-[5px] text-[13px] font-bold text-orange">
+                <div className="mb-3.5 text-[13.5px] text-slate">
+                  <p>Rotation: {gymnasticsWeek.rotation}</p>
+                  <p>Warm-up: {gymnasticsWeek.warm_up}</p>
+                  <p>Skill focus: {gymnasticsWeek.skill_focus}</p>
+                </div>
+                <a
+                  href="/gymnastics/weekly-overview"
+                  className="inline-flex items-center gap-[5px] text-[13px] font-bold text-orange"
+                >
                   Open full overview
                   <ArrowIcon />
                 </a>
