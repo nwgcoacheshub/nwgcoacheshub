@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCanEditRota } from "@/lib/rota/canEdit";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
-import { currentMonday, parseWeekDate, weekRangeLabel } from "@/lib/rota/week";
+import { currentMonday, londonToday, parseWeekDate, weekRangeLabel } from "@/lib/rota/week";
 import { resolveProfileNames, displayName } from "@/lib/clubProfile/names";
 import {
   buildAttendanceRows,
@@ -10,11 +11,24 @@ import {
   type RosterRow,
   type RosterCoach,
 } from "@/lib/clubProfile/attendance";
+import {
+  buildMeetingViews,
+  buildMonthlyOccurrenceGroups,
+  cycleWeekNumberFor,
+  cycleWeeksInMonth,
+  groupMeetingsByCategory,
+  meetingRunsInCycleWeek,
+  type ClubMeeting,
+  type CycleWeek,
+  type MeetingAttendee,
+  type MeetingCycleWeek,
+} from "@/lib/clubProfile/meetings";
 import ClubProfileUnavailable from "@/components/clubProfile/ClubProfileUnavailable";
 import ClubSiteSwitcher from "@/components/clubProfile/ClubSiteSwitcher";
 import ClubUpdates, { type ClubUpdate } from "@/components/clubProfile/ClubUpdates";
 import AttendanceGrid from "@/components/clubProfile/AttendanceGrid";
 import ClubQuickLinks from "@/components/clubProfile/ClubQuickLinks";
+import ClubMeetings from "@/components/clubProfile/ClubMeetings";
 import type { HeroSummary } from "@/components/clubProfile/HeroesModal";
 import type { RoleGroup } from "@/components/clubProfile/StaffRolesModal";
 
@@ -39,6 +53,7 @@ export default async function ClubProfileSitePage({
 
   const { user, profile } = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
+  const canEditMeetings = await getCanEditRota();
   const supabase = await createClient();
 
   const monday = currentMonday();
@@ -53,52 +68,91 @@ export default async function ClubProfileSitePage({
     .eq("week_start_date", monday)
     .maybeSingle();
 
-  const [updatesRes, coachesRes, heroesRes, categoriesRes, rolesRes, assignmentsRes, rosterRes] =
-    await Promise.all([
-      supabase
-        .from("club_updates")
-        .select("id, title, body, pinned, created_by, created_at, updated_at")
-        .eq("site_id", site.id)
-        .order("pinned", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("rota_coaches")
-        .select("id, name")
-        .eq("site_id", site.id)
-        .order("name"),
-      supabase
-        .from("heroes")
-        .select("id, name, dob")
-        .eq("site_id", site.id)
-        .eq("active", true)
-        .order("name"),
-      supabase
-        .from("club_role_categories")
-        .select("id, name")
-        .eq("active", true)
-        .order("sort_order"),
-      supabase
-        .from("club_roles")
-        .select("id, category_id, name")
-        .eq("active", true)
-        .order("sort_order"),
-      supabase
-        .from("club_role_assignments")
-        .select("id, club_role_id, coach_id")
-        .eq("site_id", site.id),
-      weekly
-        ? supabase
-            .from("rota_weekly_roster")
-            .select("day_of_week, coach_id, shift_start_mins, shift_end_mins, status")
-            .eq("weekly_rota_id", weekly.id)
-        : Promise.resolve({ data: [] as RosterRow[] }),
-    ]);
+  const [
+    updatesRes,
+    coachesRes,
+    heroesRes,
+    categoriesRes,
+    rolesRes,
+    assignmentsRes,
+    rosterRes,
+    cycleWeeksRes,
+    meetingsRes,
+  ] = await Promise.all([
+    supabase
+      .from("club_updates")
+      .select("id, title, body, pinned, created_by, created_at, updated_at")
+      .eq("site_id", site.id)
+      .order("pinned", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("rota_coaches")
+      .select("id, name")
+      .eq("site_id", site.id)
+      .order("name"),
+    supabase
+      .from("heroes")
+      .select("id, name, dob")
+      .eq("site_id", site.id)
+      .eq("active", true)
+      .order("name"),
+    supabase
+      .from("club_role_categories")
+      .select("id, name")
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("club_roles")
+      .select("id, category_id, name")
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("club_role_assignments")
+      .select("id, club_role_id, coach_id")
+      .eq("site_id", site.id),
+    weekly
+      ? supabase
+          .from("rota_weekly_roster")
+          .select("day_of_week, coach_id, shift_start_mins, shift_end_mins, status")
+          .eq("weekly_rota_id", weekly.id)
+      : Promise.resolve({ data: [] as RosterRow[] }),
+    supabase.from("cycle_weeks").select("id, week_commencing, week_number").order("week_number"),
+    supabase
+      .from("club_meetings")
+      .select("id, category, title, day_of_week, start_time, end_time, location, display_order")
+      .eq("site_id", site.id)
+      .eq("active", true)
+      .order("display_order"),
+  ]);
 
   const updates = updatesRes.data ?? [];
   const coaches = (coachesRes.data ?? []) as RosterCoach[];
   const heroes = heroesRes.data ?? [];
   const assignments = assignmentsRes.data ?? [];
   const roster = (rosterRes.data ?? []) as RosterRow[];
+  const cycleWeeks = (cycleWeeksRes.data ?? []) as CycleWeek[];
+  const meetings = (meetingsRes.data ?? []) as ClubMeeting[];
+
+  // club_meeting_attendees/cycle_weeks have no site_id of their own (they reach
+  // it through club_meetings, per 0022's RLS) — so, like heroIds below, they're
+  // fetched here once the meeting ids they key off are known, rather than
+  // joined into the Promise.all above. Both feed the weekly and the monthly
+  // view alike, so this one pass covers whichever the client toggle lands on.
+  const meetingIds = meetings.map((m) => m.id);
+  const [attendeeRes, meetingWeekRes] = meetingIds.length
+    ? await Promise.all([
+        supabase
+          .from("club_meeting_attendees")
+          .select("meeting_id, coach_id")
+          .in("meeting_id", meetingIds),
+        supabase
+          .from("club_meeting_cycle_weeks")
+          .select("meeting_id, cycle_week_number")
+          .in("meeting_id", meetingIds),
+      ])
+    : [{ data: [] as MeetingAttendee[] }, { data: [] as MeetingCycleWeek[] }];
+  const meetingAttendees = (attendeeRes.data ?? []) as MeetingAttendee[];
+  const meetingCycleWeeks = (meetingWeekRes.data ?? []) as MeetingCycleWeek[];
 
   // Hero hours are summed here rather than in SQL — supabase-js has no group-by,
   // and a site's log is small enough that pulling the rows is cheaper than the
@@ -174,6 +228,32 @@ export default async function ClubProfileSitePage({
       })),
   }));
 
+  // rota_coaches is site-readable by any coach (see lib/clubProfile/names.ts),
+  // so attendee names come straight off the roster already fetched above
+  // rather than through resolve_profile_names().
+  const coachNameById = new Map(coaches.map((c) => [c.id, c.name]));
+
+  const meetingViews = buildMeetingViews({
+    meetings,
+    attendees: meetingAttendees,
+    cycleWeeks: meetingCycleWeeks,
+    coachNameById,
+  });
+
+  // Both read views are built here so the Weekly/Monthly toggle is a pure
+  // client-side switch — no second fetch, no navigation.
+  const currentCycleWeekNumber = cycleWeekNumberFor(cycleWeeks, monday);
+  const weeklyMeetingGroups = groupMeetingsByCategory(
+    meetingViews.filter((m) => meetingRunsInCycleWeek(m, currentCycleWeekNumber))
+  );
+  const monthlyMeetingGroups = buildMonthlyOccurrenceGroups(
+    meetingViews,
+    cycleWeeksInMonth(cycleWeeks, londonToday())
+  );
+  // Manage meetings edits the definitions themselves, so it sees every active
+  // meeting regardless of which weeks it runs in.
+  const manageMeetingGroups = groupMeetingsByCategory(meetingViews);
+
   return (
     <main className="mx-auto max-w-[1280px] p-6">
       <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
@@ -207,6 +287,16 @@ export default async function ClubProfileSitePage({
         weekRange={weekRange}
         weekGenerated={Boolean(weekly)}
         siteSlug={site.slug}
+      />
+
+      <ClubMeetings
+        siteId={site.id}
+        canEdit={canEditMeetings}
+        cycleWeekNumber={currentCycleWeekNumber}
+        weeklyGroups={weeklyMeetingGroups}
+        monthlyGroups={monthlyMeetingGroups}
+        manageGroups={manageMeetingGroups}
+        coaches={coaches}
       />
 
       <ClubQuickLinks

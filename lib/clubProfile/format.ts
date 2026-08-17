@@ -33,6 +33,49 @@ export function formatMinutes(totalMinutes: number): string {
   return `${hours}h ${mins}m`;
 }
 
+// club_meetings.day_of_week: 0=Monday..6=Sunday, matching the rota's own
+// day_of_week convention (rota_weekly_roster, buildAttendanceRows) rather than
+// JS Date.getDay()'s 0=Sunday.
+const MEETING_DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function clockLabel(time: string): { clock: string; meridiem: "am" | "pm" } {
+  const [hStr, mStr] = time.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr);
+  const meridiem = h >= 12 ? "pm" : "am";
+  let h12 = h % 12;
+  if (h12 === 0) h12 = 12;
+  return { clock: `${h12}:${String(m).padStart(2, "0")}`, meridiem };
+}
+
+/**
+ * (1, "09:00:00", "09:30:00") -> "Tue · 9:00–9:30am". Mirrors
+ * lib/rota/exportLayout.ts's compactTimeRange: the start time drops its
+ * meridiem whenever the end time shares it.
+ */
+export function meetingWhenLabel(
+  dayOfWeek: number,
+  startTime: string,
+  endTime: string
+): string {
+  const day = MEETING_DAY_NAMES[dayOfWeek] ?? "";
+  const start = clockLabel(startTime);
+  const end = clockLabel(endTime);
+  const from = start.clock + (start.meridiem === end.meridiem ? "" : start.meridiem);
+  return `${day} · ${from}–${end.clock}${end.meridiem}`;
+}
+
+/**
+ * A meeting's cycle-week restriction as display copy: [] -> null (it runs every
+ * week, which the read views leave unsaid), [3] -> "Week 3", [2, 5] ->
+ * "Weeks 2, 5".
+ */
+export function weekPatternLabel(cycleWeekNumbers: number[]): string | null {
+  if (cycleWeekNumbers.length === 0) return null;
+  const label = cycleWeekNumbers.length === 1 ? "Week" : "Weeks";
+  return `${label} ${cycleWeekNumbers.join(", ")}`;
+}
+
 /**
  * Day-granularity relative label for a timestamp: "Today", "Yesterday",
  * "3 days ago", "2 weeks ago", then an absolute date past ~8 weeks.
