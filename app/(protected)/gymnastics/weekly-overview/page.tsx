@@ -53,11 +53,11 @@ export default async function WeeklyOverviewPage() {
   const [{ data: gymnasticsRows }, { data: preschoolRows }] = await Promise.all([
     supabase
       .from("programme_gymnastics_weeks")
-      .select("week_commencing, week_number, rotation, warm_up, skill_focus")
+      .select("week_commencing, cycle_week_id, rotation, warm_up, skill_focus")
       .order("week_commencing", { ascending: true }),
     supabase
       .from("programme_preschool_weeks")
-      .select("week_commencing, week_number, category, mini_theme")
+      .select("week_commencing, cycle_week_id, category, mini_theme")
       .order("week_commencing", { ascending: true }),
   ]);
 
@@ -66,6 +66,22 @@ export default async function WeeklyOverviewPage() {
   );
   const preschoolByWeek = new Map(
     (preschoolRows ?? []).map((row) => [row.week_commencing as string, row])
+  );
+
+  // week_number now lives on cycle_weeks (0018) — the programme tables' own
+  // week_number columns are left in place but unread from here on.
+  const cycleWeekIds = Array.from(
+    new Set(
+      [...(gymnasticsRows ?? []), ...(preschoolRows ?? [])]
+        .map((row) => row.cycle_week_id)
+        .filter((id): id is string => id != null)
+    )
+  );
+  const { data: cycleWeekRows } = cycleWeekIds.length
+    ? await supabase.from("cycle_weeks").select("id, week_number").in("id", cycleWeekIds)
+    : { data: [] as { id: string; week_number: number }[] };
+  const weekNumberByCycleWeekId = new Map(
+    (cycleWeekRows ?? []).map((row) => [row.id, row.week_number])
   );
 
   const allWeekCommencing = Array.from(
@@ -82,11 +98,19 @@ export default async function WeeklyOverviewPage() {
     const preschool = preschoolByWeek.get(weekCommencing);
     const monthKey = weekCommencing.slice(0, 7);
 
-    // Gymnastics week_number is the source of truth for the row label — it's
+    // Gymnastics' cycle week is the source of truth for the row label — it's
     // what's driven the "Week X" pattern throughout this feature. Only falls
-    // back to the pre-school cycle's own numbering on weeks with no
-    // gymnastics row at all.
-    const weekNumber = gymnastics?.week_number ?? preschool?.week_number ?? null;
+    // back to the pre-school row's cycle week on weeks with no gymnastics row
+    // at all.
+    const gymnasticsWeekNumber =
+      gymnastics?.cycle_week_id != null
+        ? weekNumberByCycleWeekId.get(gymnastics.cycle_week_id) ?? null
+        : null;
+    const preschoolWeekNumber =
+      preschool?.cycle_week_id != null
+        ? weekNumberByCycleWeekId.get(preschool.cycle_week_id) ?? null
+        : null;
+    const weekNumber = gymnasticsWeekNumber ?? preschoolWeekNumber;
 
     const row: WeekRow = {
       weekCommencing,

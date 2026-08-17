@@ -38,13 +38,13 @@ export default async function WeeklyFocusHero() {
 
   const { data: gymnasticsWeek } = await supabase
     .from("programme_gymnastics_weeks")
-    .select("warm_up, skill_focus, rotation, week_number")
+    .select("warm_up, skill_focus, rotation, cycle_week_id")
     .eq("week_commencing", weekCommencing)
     .maybeSingle();
 
   const { data: preschoolWeek } = await supabase
     .from("programme_preschool_weeks")
-    .select("category, mini_theme, week_number")
+    .select("category, mini_theme, cycle_week_id")
     .eq("week_commencing", weekCommencing)
     .maybeSingle();
 
@@ -56,8 +56,25 @@ export default async function WeeklyFocusHero() {
     .limit(1)
     .maybeSingle();
 
+  // week_number now lives on cycle_weeks (0018) — the programme tables' own
+  // week_number columns are left in place but unread from here on.
+  const cycleWeekIds = [gymnasticsWeek?.cycle_week_id, preschoolWeek?.cycle_week_id].filter(
+    (id): id is string => id != null
+  );
+  const { data: cycleWeekRows } = cycleWeekIds.length
+    ? await supabase.from("cycle_weeks").select("id, week_number").in("id", cycleWeekIds)
+    : { data: [] as { id: string; week_number: number }[] };
+  const weekNumberByCycleWeekId = new Map(
+    (cycleWeekRows ?? []).map((row) => [row.id, row.week_number])
+  );
+  const gymnasticsWeekNumber = gymnasticsWeek?.cycle_week_id
+    ? weekNumberByCycleWeekId.get(gymnasticsWeek.cycle_week_id) ?? null
+    : null;
+
   const thisMondayLabel = weekDayLabels(parseWeekDate(weekCommencing)!)[0];
-  const preschoolWeekNumber = preschoolWeek?.week_number ?? null;
+  const preschoolWeekNumber = preschoolWeek?.cycle_week_id
+    ? weekNumberByCycleWeekId.get(preschoolWeek.cycle_week_id) ?? null
+    : null;
   const nextPreschoolMonday = nextPreschoolWeek ? parseWeekDate(nextPreschoolWeek.week_commencing) : null;
   const nextPreschoolLabel = nextPreschoolMonday ? weekDayLabels(nextPreschoolMonday)[0] : null;
 
@@ -105,7 +122,7 @@ export default async function WeeklyFocusHero() {
             {gymnasticsWeek ? (
               <>
                 <h3 className="mb-[5px] text-[19px] font-bold text-ink">
-                  Week {gymnasticsWeek.week_number}
+                  Week {gymnasticsWeekNumber}
                 </h3>
                 <div className="mb-3.5 text-[13.5px] text-slate">
                   <p>Rotation: {gymnasticsWeek.rotation}</p>
