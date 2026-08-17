@@ -54,8 +54,9 @@ at a time; closes on outside click or Escape:
 - **Club Profile** — Burnley, Coventry, Leeds, Mansfield, Rotherham, Wirral,
   Wolverhampton, Head Office (currently inert/disabled placeholders — no per-site route
   exists yet)
-- **Gymnastics** — Weekly Focus, Programme Resources, Coaching Guides (currently
-  inert/disabled placeholders — no sub-route exists yet)
+- **Gymnastics** — Weekly Overview (live route `/gymnastics/weekly-overview`), Programme
+  Resources, Coaching Guides (the latter two currently inert/disabled placeholders — no
+  sub-route exists yet)
 - **Operations** — Rota (existing `/rota` route, fully functional) and Site SOPs (stub
   route `/operations/site-sops`)
 - **People** — HR Links, My Compliance (currently inert/disabled placeholders — no

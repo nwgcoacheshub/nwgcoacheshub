@@ -259,7 +259,7 @@ export default function NavBar({
             }
             label="Gymnastics"
             items={[
-              { label: "Weekly Focus", disabled: true },
+              { label: "Weekly Overview", href: "/gymnastics/weekly-overview" },
               { label: "Programme Resources", disabled: true },
               { label: "Coaching Guides", disabled: true },
             ]}

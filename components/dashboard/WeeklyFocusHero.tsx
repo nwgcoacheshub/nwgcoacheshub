@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabaseServer";
-import { londonToday } from "@/lib/rota/week";
+import { currentMonday, londonToday, parseWeekDate, weekDayLabels } from "@/lib/rota/week";
 
 function ArrowIcon() {
   return (
@@ -28,11 +28,37 @@ function QuoteIcon({ className }: { className?: string }) {
 export default async function WeeklyFocusHero() {
   const supabase = await createClient();
   const currentMonth = londonToday().getUTCMonth() + 1;
+  const weekCommencing = currentMonday();
+
   const { data: mantra } = await supabase
     .from("mantras")
     .select("mantra_text")
     .eq("month_number", currentMonth)
     .maybeSingle();
+
+  const { data: gymnasticsWeek } = await supabase
+    .from("programme_gymnastics_weeks")
+    .select("warm_up, skill_focus, rotation")
+    .eq("week_commencing", weekCommencing)
+    .maybeSingle();
+
+  const { data: preschoolWeek } = await supabase
+    .from("programme_preschool_weeks")
+    .select("category, mini_theme, week_number")
+    .eq("week_commencing", weekCommencing)
+    .maybeSingle();
+
+  const { data: nextPreschoolWeek } = await supabase
+    .from("programme_preschool_weeks")
+    .select("week_commencing, mini_theme")
+    .gt("week_commencing", weekCommencing)
+    .order("week_commencing", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const preschoolWeekNumber = preschoolWeek?.week_number ?? null;
+  const nextPreschoolMonday = nextPreschoolWeek ? parseWeekDate(nextPreschoolWeek.week_commencing) : null;
+  const nextPreschoolLabel = nextPreschoolMonday ? weekDayLabels(nextPreschoolMonday)[0] : null;
 
   return (
     <>
@@ -76,57 +102,70 @@ export default async function WeeklyFocusHero() {
             <div className="mb-[9px] text-[11.5px] font-bold uppercase tracking-wide text-orange">
               Weekly overview
             </div>
-            <h3 className="mb-[5px] text-[19px] font-bold text-ink">Handstand Alignment</h3>
-            <p className="mb-3.5 text-[13.5px] text-slate">
-              This week&apos;s whole-club focus. Flat back, active shoulders, and consistent
-              hollow-body positioning through conditioning and wall drills.
-            </p>
-            <div className="mb-3.5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-orange px-[11px] py-[5px] text-xs font-semibold text-white">
-                Flat back
-              </span>
-              <span className="rounded-full bg-background px-[11px] py-[5px] text-xs font-semibold text-slate-dark">
-                Active shoulders
-              </span>
-              <span className="rounded-full bg-background px-[11px] py-[5px] text-xs font-semibold text-slate-dark">
-                Wall drills
-              </span>
-            </div>
-            <a href="#" className="inline-flex items-center gap-[5px] text-[13px] font-bold text-orange">
-              Open full overview
-              <ArrowIcon />
-            </a>
+            {gymnasticsWeek ? (
+              <>
+                <h3 className="mb-[5px] text-[19px] font-bold text-ink">
+                  {gymnasticsWeek.skill_focus}
+                </h3>
+                <p className="mb-3.5 text-[13.5px] text-slate">
+                  Warm-up: {gymnasticsWeek.warm_up}
+                  {gymnasticsWeek.rotation != null && <> · Rotation {gymnasticsWeek.rotation}</>}
+                </p>
+                <a href="#" className="inline-flex items-center gap-[5px] text-[13px] font-bold text-orange">
+                  Open full overview
+                  <ArrowIcon />
+                </a>
+              </>
+            ) : (
+              <p className="text-[13.5px] text-slate-light">No schedule set for this week.</p>
+            )}
           </div>
 
           <div className="border-t border-line p-5 sm:border-l sm:border-t-0">
             <div className="mb-[9px] text-[11.5px] font-bold uppercase tracking-wide text-orange">
               Pre-school theme
             </div>
-            <h3 className="mb-[5px] text-[19px] font-bold text-ink">Under the Sea 🐠</h3>
-            <p className="mb-3.5 text-[13.5px] text-slate">
-              Current theme in the 9-week Tiny Tumblers &amp; Little Flippers cycle. Songs,
-              station ideas and apparatus set-ups included.
-            </p>
-            <div className="mt-1">
-              <div className="mb-2 flex gap-1">
-                <span className="h-[7px] flex-1 rounded bg-orange-light" />
-                <span className="h-[7px] flex-1 rounded bg-orange-light" />
-                <span className="h-[7px] flex-1 rounded bg-orange-light" />
-                <span className="h-[7px] flex-1 rounded bg-orange" />
-                <span className="h-[7px] flex-1 rounded bg-line" />
-                <span className="h-[7px] flex-1 rounded bg-line" />
-                <span className="h-[7px] flex-1 rounded bg-line" />
-                <span className="h-[7px] flex-1 rounded bg-line" />
-                <span className="h-[7px] flex-1 rounded bg-line" />
-              </div>
-              <div className="text-xs text-slate-light">
-                <b className="text-ink">Week 4 of 9</b> · Next: <b className="text-ink">Jungle Adventure</b> (w/c 10 Aug)
-              </div>
-            </div>
-            <a href="#" className="mt-3.5 inline-flex items-center gap-[5px] text-[13px] font-bold text-orange">
-              Open theme pack
-              <ArrowIcon />
-            </a>
+            {preschoolWeek ? (
+              <>
+                <h3 className="mb-[5px] text-[19px] font-bold text-ink">{preschoolWeek.category}</h3>
+                <p className="mb-3.5 text-[13.5px] text-slate">{preschoolWeek.mini_theme}</p>
+                {preschoolWeekNumber != null && (
+                  <div className="mt-1">
+                    <div className="mb-2 flex gap-1">
+                      {Array.from({ length: 9 }, (_, i) => {
+                        const segment = i + 1;
+                        const filled =
+                          segment < preschoolWeekNumber
+                            ? "bg-orange-light"
+                            : segment === preschoolWeekNumber
+                              ? "bg-orange"
+                              : "bg-line";
+                        return <span key={segment} className={`h-[7px] flex-1 rounded ${filled}`} />;
+                      })}
+                    </div>
+                    <div className="text-xs text-slate-light">
+                      <b className="text-ink">Week {preschoolWeekNumber} of 9</b>
+                      {nextPreschoolWeek && nextPreschoolLabel && (
+                        <>
+                          {" "}
+                          · Next: <b className="text-ink">{nextPreschoolWeek.mini_theme}</b> (w/c{" "}
+                          {nextPreschoolLabel})
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <a
+                  href="#"
+                  className="mt-3.5 inline-flex items-center gap-[5px] text-[13px] font-bold text-orange"
+                >
+                  Open theme pack
+                  <ArrowIcon />
+                </a>
+              </>
+            ) : (
+              <p className="text-[13.5px] text-slate-light">No schedule set for this week.</p>
+            )}
           </div>
         </div>
       </div>
