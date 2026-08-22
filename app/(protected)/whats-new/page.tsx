@@ -11,9 +11,24 @@ import WhatsNewFeed, { type WhatsNewItem } from "@/components/WhatsNewFeed";
 // insert/update/delete policies re-check is_admin() in the database, so a coach
 // who forced isAdmin true in the browser would still be refused.
 
-export default async function WhatsNewPage() {
+// ?id=<uuid> comes from clicking an item in the dashboard panel, and means
+// "open this one on arrival". It is read here rather than with
+// useSearchParams() in the feed for two reasons: this page already does its
+// derivation server-side and hands the client component props (the same shape
+// as PoliciesPage), and reading it here means the row arrives already expanded
+// in the server-rendered HTML instead of flashing collapsed and then opening.
+//
+// It seeds initial state only. The feed never writes the param back as rows are
+// toggled — see the note on expandedIds there.
+
+export default async function WhatsNewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string | string[] }>;
+}) {
   const { user, profile } = await getCurrentProfile();
   const isAdmin = profile?.role === "admin";
+  const { id } = await searchParams;
 
   // RLS-gated select: whats_new_select_authenticated (0025) requires
   // is_active_coach(). Ordered by published_at — the date the item claims, not
@@ -23,6 +38,13 @@ export default async function WhatsNewPage() {
     .from("whats_new")
     .select("id, title, body, link_url, link_label, published_at")
     .order("published_at", { ascending: false });
+
+  // Resolved against the rows actually on the page, so a stale link — an item
+  // deleted since the dashboard rendered — quietly becomes null and the page
+  // loads with nothing expanded. A repeated ?id= arrives as an array, which is
+  // not a meaningful request either way, so only a lone string is honoured.
+  const focusId =
+    typeof id === "string" && (items ?? []).some((item) => item.id === id) ? id : null;
 
   return (
     <main className="mx-auto max-w-[920px] p-6">
@@ -39,6 +61,7 @@ export default async function WhatsNewPage() {
         isAdmin={isAdmin}
         currentUserId={user?.id ?? null}
         initialItems={(items ?? []) as WhatsNewItem[]}
+        focusId={focusId}
       />
     </main>
   );

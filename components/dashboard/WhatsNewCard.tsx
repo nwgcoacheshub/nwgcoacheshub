@@ -57,12 +57,18 @@ export default async function WhatsNewCard() {
                 title wraps, because the row is items-start. */}
             <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
             <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] font-semibold leading-[1.35] text-ink">
-                {item.title}
-              </div>
-              <p className="mt-1 line-clamp-2 text-[12.5px] leading-[1.45] text-slate">
-                {item.body}
-              </p>
+              {/* Title and body are one link through to the full page, which
+                  opens this item expanded and scrolls to it. It stops at the
+                  body on purpose: the meta row below can hold the item's own
+                  external link, and an anchor inside an anchor is invalid. */}
+              <a href={`/whats-new?id=${encodeURIComponent(item.id)}`} className="block">
+                <div className="text-[13.5px] font-semibold leading-[1.35] text-ink">
+                  {item.title}
+                </div>
+                <p className="mt-1 line-clamp-2 text-[12.5px] leading-[1.45] text-slate">
+                  {item.body}
+                </p>
+              </a>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <span className="text-[11.5px] text-slate-light">
                   {formatPublished(item.published_at)}

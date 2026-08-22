@@ -14,7 +14,7 @@
 // whether the controls render; it isn't what enforces the rule. A coach who
 // forced it true in the browser would have every write refused by RLS.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { formatPublished } from "@/lib/whatsNew/format";
@@ -127,10 +127,17 @@ export default function WhatsNewFeed({
   isAdmin,
   currentUserId,
   initialItems,
+  focusId,
 }: {
   isAdmin: boolean;
   currentUserId: string | null;
   initialItems: WhatsNewItem[];
+  /**
+   * The item to open and scroll to on arrival, from ?id= on the dashboard
+   * panel's links. Already checked against initialItems by the page, so it is
+   * either a row that exists or null. Seeds initial state and nothing more.
+   */
+  focusId: string | null;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -144,10 +151,30 @@ export default function WhatsNewFeed({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Plain client state, and a set rather than a single id because more than one
-  // row may be open at a time. Deliberately not in the URL: expanding a row
-  // isn't a destination, and a search param would put a history entry behind
-  // every click and re-run the server component for a purely local toggle.
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  // row may be open at a time. Deliberately not synced to the URL: expanding a
+  // row isn't a destination, and a search param would put a history entry behind
+  // every click and re-run the server component for a purely local toggle. That
+  // is what caused the reload-and-scroll-reset trouble on the meetings feature.
+  //
+  // focusId only seeds the set, through a lazy initialiser that React runs on
+  // the first render and never again. There is deliberately no effect syncing
+  // later focusId changes into this state: re-seeding would spring open a row
+  // the user had since collapsed. Every visit from the panel is a fresh mount of
+  // this route, so there is no case where that matters.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
+    focusId ? new Set([focusId]) : new Set()
+  );
+
+  // Scrolled to on mount, not on every toggle — the dependency is focusId,
+  // which the page derives from the URL and does not change while the page is
+  // open. The ref is attached to the focused row only, so with no ?id= there is
+  // nothing to scroll and the effect returns immediately.
+  const focusRowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!focusId) return;
+    focusRowRef.current?.scrollIntoView({ block: "center" });
+  }, [focusId]);
 
   function toggleExpanded(id: string) {
     setExpandedIds((current) => {
@@ -334,6 +361,7 @@ export default function WhatsNewFeed({
             // Anything else interactive inside the row does the same.
             <div
               key={item.id}
+              ref={item.id === focusId ? focusRowRef : null}
               onClick={() => toggleExpanded(item.id)}
               className="flex cursor-pointer items-start gap-2 border-b border-line px-5 py-3 last:border-b-0 hover:bg-background/60"
             >
