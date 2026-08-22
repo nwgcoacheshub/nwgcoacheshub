@@ -41,6 +41,7 @@ const POLICY_TAGS = [
   "HR",
   "Health & Safety",
   "Operations",
+  "Gymnastics",
   "Other",
 ] as const;
 
