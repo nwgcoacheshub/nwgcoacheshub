@@ -345,12 +345,16 @@ export default function WhatsNewFeed({
                     e.stopPropagation();
                     toggleExpanded(item.id);
                   }}
-                  className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm font-semibold text-ink"
+                  className="flex min-w-0 flex-1 items-start gap-1.5 text-left text-sm font-semibold text-ink"
                 >
-                  {/* Same fixed accent as the dashboard panel. Sits inside the
-                      title button so it renders identically whether the row is
-                      collapsed or expanded — only the content below changes. */}
-                  <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
+                  {/* Same fixed accent, and the same hanging-bullet offset, as
+                      the dashboard panel: -13px cancels the dot plus the gap, so
+                      the title starts on the row's own left edge — level with
+                      the snippet, the full body, and the page heading — and the
+                      dot hangs out in the px-5 padding. Inside the title button
+                      so it renders identically collapsed or expanded; only the
+                      content below the header row changes. */}
+                  <span className="-ml-[13px] mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
                   <span className="min-w-0">{item.title}</span>
                 </button>
                 <div className="flex shrink-0 items-center gap-2">

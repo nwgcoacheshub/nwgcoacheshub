@@ -41,11 +41,18 @@ export default async function WhatsNewCard() {
       ) : (
         newsItems.map((item) => (
           <div key={item.id} className="border-b border-line px-[18px] py-3 last:border-b-0">
-            <div className="flex items-start gap-2 text-[13.5px] font-semibold leading-[1.35] text-ink">
+            <div className="flex items-start gap-1.5 text-[13.5px] font-semibold leading-[1.35] text-ink">
               {/* Decorative only, and deliberately fixed: the placeholder's dot
                   was colour-coded by a category whats_new has no column for, so
-                  this is one accent shared by every item rather than a signal. */}
-              <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
+                  this is one accent shared by every item rather than a signal.
+
+                  A hanging bullet. The negative margin is exactly the dot plus
+                  the gap (7 + 6), so it cancels out and the title starts on the
+                  row's own left edge — level with the body, the date, and the
+                  card header above — while the dot sits out in the px-[18px]
+                  padding. It stays on the title's first line if the title wraps,
+                  because the flex row is items-start. */}
+              <span className="-ml-[13px] mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
               <span className="min-w-0">{item.title}</span>
             </div>
             <p className="mt-1 line-clamp-2 text-[12.5px] leading-[1.45] text-slate">
