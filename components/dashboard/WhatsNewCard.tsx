@@ -40,38 +40,44 @@ export default async function WhatsNewCard() {
         </div>
       ) : (
         newsItems.map((item) => (
-          <div key={item.id} className="border-b border-line px-[18px] py-3 last:border-b-0">
-            <div className="flex items-start gap-1.5 text-[13.5px] font-semibold leading-[1.35] text-ink">
-              {/* Decorative only, and deliberately fixed: the placeholder's dot
-                  was colour-coded by a category whats_new has no column for, so
-                  this is one accent shared by every item rather than a signal.
+          <div
+            key={item.id}
+            className="flex items-start gap-2 border-b border-line px-[18px] py-3 last:border-b-0"
+          >
+            {/* Decorative only, and deliberately fixed: the placeholder's dot
+                was colour-coded by a category whats_new has no column for, so
+                this is one accent shared by every item rather than a signal.
 
-                  A hanging bullet. The negative margin is exactly the dot plus
-                  the gap (7 + 6), so it cancels out and the title starts on the
-                  row's own left edge — level with the body, the date, and the
-                  card header above — while the dot sits out in the px-[18px]
-                  padding. It stays on the title's first line if the title wraps,
-                  because the flex row is items-start. */}
-              <span className="-ml-[13px] mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
-              <span className="min-w-0">{item.title}</span>
-            </div>
-            <p className="mt-1 line-clamp-2 text-[12.5px] leading-[1.45] text-slate">
-              {item.body}
-            </p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className="text-[11.5px] text-slate-light">
-                {formatPublished(item.published_at)}
-              </span>
-              {item.link_url && (
-                <a
-                  href={item.link_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full bg-orange-pale px-2 py-0.5 text-[11px] font-bold text-orange-dark"
-                >
-                  {item.link_label || "Open link"}
-                </a>
-              )}
+                The dot is a sibling of the text column rather than part of the
+                title line, which is what makes the title, the body and the date
+                share one left edge — the column's — instead of the body and date
+                sliding back under the dot. The dot plus the gap is the whole of
+                the item's indent from the card header; nothing adds padding on
+                top of it. It stays level with the title's first line if the
+                title wraps, because the row is items-start. */}
+            <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-semibold leading-[1.35] text-ink">
+                {item.title}
+              </div>
+              <p className="mt-1 line-clamp-2 text-[12.5px] leading-[1.45] text-slate">
+                {item.body}
+              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-[11.5px] text-slate-light">
+                  {formatPublished(item.published_at)}
+                </span>
+                {item.link_url && (
+                  <a
+                    href={item.link_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-orange-pale px-2 py-0.5 text-[11px] font-bold text-orange-dark"
+                  >
+                    {item.link_label || "Open link"}
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         ))

@@ -335,109 +335,113 @@ export default function WhatsNewFeed({
             <div
               key={item.id}
               onClick={() => toggleExpanded(item.id)}
-              className="cursor-pointer border-b border-line px-5 py-3 last:border-b-0 hover:bg-background/60"
+              className="flex cursor-pointer items-start gap-2 border-b border-line px-5 py-3 last:border-b-0 hover:bg-background/60"
             >
-              <div className="flex items-start justify-between gap-3">
-                <button
-                  type="button"
-                  aria-expanded={expanded}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleExpanded(item.id);
-                  }}
-                  className="flex min-w-0 flex-1 items-start gap-1.5 text-left text-sm font-semibold text-ink"
-                >
-                  {/* Same fixed accent, and the same hanging-bullet offset, as
-                      the dashboard panel: -13px cancels the dot plus the gap, so
-                      the title starts on the row's own left edge — level with
-                      the snippet, the full body, and the page heading — and the
-                      dot hangs out in the px-5 padding. Inside the title button
-                      so it renders identically collapsed or expanded; only the
-                      content below the header row changes. */}
-                  <span className="-ml-[13px] mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
-                  <span className="min-w-0">{item.title}</span>
-                </button>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-[11.5px] text-slate-light">
-                    {formatPublished(item.published_at)}
-                  </span>
-                  {isAdmin && (
-                    <div className="flex gap-1.5">
-                      <button
-                        className={rowActionClass}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEdit(item);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className={rowActionClass}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setError(null);
-                          setConfirmDeleteId(item.id);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {expanded ? (
-                <>
-                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-[1.5] text-slate">
-                    {item.body}
-                  </p>
-                  {item.link_url && (
-                    <a
-                      href={item.link_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className={`${secondaryButtonClass} mt-2.5 inline-block`}
-                    >
-                      {item.link_label || "Open link"}
-                    </a>
-                  )}
-                </>
-              ) : (
-                <p className="mt-0.5 line-clamp-1 text-[13px] text-slate-light">{item.body}</p>
-              )}
-
-              {confirmDeleteId === item.id && (
-                // Same mechanism and copy as ClubUpdates' inline confirmation.
-                // The danger button's classes are a literal there rather than a
-                // formStyles export; duplicated verbatim here so the two stay
-                // identical without refactoring ClubUpdates.
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="mt-3 rounded-lg border border-line bg-background px-3.5 py-3"
-                >
-                  <p className="text-[13px] font-semibold text-ink">Delete “{item.title}”?</p>
-                  <p className="mt-1 text-[12.5px] text-slate-light">
-                    This can&apos;t be undone.
-                  </p>
-                  <div className="mt-2.5 flex justify-end gap-2">
-                    <button
-                      onClick={() => setConfirmDeleteId(null)}
-                      className={secondaryButtonClass}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() => handleDelete(item.id)}
-                      className="rounded-lg bg-[#C25218] px-3.5 py-2 text-[13px] font-bold text-white hover:bg-[#A84614] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {busy ? "Deleting…" : "Delete"}
-                    </button>
+              {/* Same fixed accent as the dashboard panel, and positioned the
+                  same way: a sibling of the text column rather than part of the
+                  title line, so the title, the snippet, the expanded body and
+                  the confirmation block all share the column's left edge. The
+                  dot plus the gap is the whole of the item's indent from the
+                  page heading. Outside the title button now, which leaves the
+                  button's accessible name as the title alone; it still sits in
+                  the always-rendered part of the row, so it looks the same
+                  collapsed or expanded. */}
+              <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(item.id);
+                    }}
+                    className="min-w-0 flex-1 text-left text-sm font-semibold text-ink"
+                  >
+                    {item.title}
+                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-[11.5px] text-slate-light">
+                      {formatPublished(item.published_at)}
+                    </span>
+                    {isAdmin && (
+                      <div className="flex gap-1.5">
+                        <button
+                          className={rowActionClass}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEdit(item);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className={rowActionClass}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setError(null);
+                            setConfirmDeleteId(item.id);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {expanded ? (
+                  <>
+                    <p className="mt-1.5 whitespace-pre-wrap text-sm leading-[1.5] text-slate">
+                      {item.body}
+                    </p>
+                    {item.link_url && (
+                      <a
+                        href={item.link_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className={`${secondaryButtonClass} mt-2.5 inline-block`}
+                      >
+                        {item.link_label || "Open link"}
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-0.5 line-clamp-1 text-[13px] text-slate-light">{item.body}</p>
+                )}
+
+                {confirmDeleteId === item.id && (
+                  // Same mechanism and copy as ClubUpdates' inline confirmation.
+                  // The danger button's classes are a literal there rather than a
+                  // formStyles export; duplicated verbatim here so the two stay
+                  // identical without refactoring ClubUpdates.
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-3 rounded-lg border border-line bg-background px-3.5 py-3"
+                  >
+                    <p className="text-[13px] font-semibold text-ink">Delete “{item.title}”?</p>
+                    <p className="mt-1 text-[12.5px] text-slate-light">
+                      This can&apos;t be undone.
+                    </p>
+                    <div className="mt-2.5 flex justify-end gap-2">
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className={secondaryButtonClass}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => handleDelete(item.id)}
+                        className="rounded-lg bg-[#C25218] px-3.5 py-2 text-[13px] font-bold text-white hover:bg-[#A84614] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {busy ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
