@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Policies — NWG Coaches Hub (mockup)</title>
+<style>
+  :root {
+    --orange: #F58220;
+    --orange-dark: #d96f14;
+    --ink: #1c1c1e;
+    --ink-soft: #55565c;
+    --line: #e6e5e2;
+    --bg: #f7f6f4;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .shell { max-width: 920px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* breadcrumb / nav context */
+  .crumb {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .crumb span { color: var(--ink); font-weight: 600; }
+
+  .page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .page-head h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .page-head p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    max-width: 46ch;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 13px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--orange); color: white; }
+  .btn-primary:hover { background: var(--orange-dark); }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+  .btn-ghost:hover { background: #f0efec; }
+  .btn-icon {
+    padding: 6px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: white;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-icon:hover { background: #f0efec; }
+  .btn-icon.danger:hover { background: #fdecec; border-color: #f3b9b9; }
+
+  /* controls row */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .search-wrap {
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 9px 12px 9px 34px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    font-size: 13.5px;
+    background: white;
+  }
+  .search-wrap input:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(245,130,32,0.12);
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.45;
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .chip {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: white;
+    color: var(--ink-soft);
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip.active {
+    background: rgba(245,130,32,0.12);
+    border-color: var(--orange);
+    color: var(--orange-dark);
+  }
+
+  /* list */
+  .list {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: #fbfaf9; }
+
+  .file-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #fdeee0;
+    color: var(--orange-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .row-main { flex: 1; min-width: 0; }
+  .row-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .tag-pill {
+    background: #f0efec;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .dot { opacity: 0.4; }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .empty {
+    padding: 46px 20px;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .empty h3 { margin: 10px 0 4px; color: var(--ink); font-size: 15px; }
+  .empty p { margin: 0; font-size: 13px; }
+
+  /* modal */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,18,15,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 14px;
+    width: 420px;
+    max-width: 92vw;
+    padding: 22px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  }
+  .modal h2 { font-size: 16px; margin: 0 0 4px; }
+  .modal .sub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 18px; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .field input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .field input[type="text"]:focus { outline: none; border-color: var(--orange); }
+  .tag-picker { display: flex; flex-wrap: wrap; gap: 7px; }
+  .dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    background: #fafaf9;
+  }
+  .dropzone strong { color: var(--orange-dark); }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .note {
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: #fdf6ee;
+    border: 1px solid #f2ddc0;
+    border-radius: 9px;
+    padding: 10px 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="crumb">People / <span>Policies</span></div>
+
+  <div class="page-head">
+    <div>
+      <h1>Policies</h1>
+      <p>Current policy documents for all coaches. Search or filter by tag to find what you need.</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('overlay').classList.add('show')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Upload policy
+    </button>
+  </div>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" placeholder="Search policies by title…">
+    </div>
+    <div class="tag-row">
+      <div class="chip active">All</div>
+      <div class="chip">Safeguarding</div>
+      <div class="chip">HR</div>
+      <div class="chip">Health &amp; Safety</div>
+      <div class="chip">Operations</div>
+      <div class="chip">Other</div>
+    </div>
+  </div>
+
+  <div class="list">
+
+    <div class="row">
+      <div class="file-icon">PDF</div>
+      <div class="row-main">
+        <p class="row-title">Safeguarding &amp; Child Protection Policy</p>
+        <div class="row-meta">
+          <span class="tag-pill">Safeguarding</span>
+          <span class="dot">•</span>
+          <span>412 KB</span>
+          <span class="dot">•</span>
+          <span>Updated 14 Aug 2026</span>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn-icon" title="Edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="btn-icon" title="Download">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </button>
+        <button class="btn-icon danger" title="Delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="file-icon">PDF</div>
+      <div class="row-main">
+        <p class="row-title">Staff Code of Conduct</p>
+        <div class="row-meta">
+          <span class="tag-pill">HR</span>
+          <span class="dot">•</span>
+          <span>198 KB</span>
+          <span class="dot">•</span>
+          <span>Updated 2 Aug 2026</span>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn-icon" title="Edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="btn-icon" title="Download">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </button>
+        <button class="btn-icon danger" title="Delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="file-icon">PDF</div>
+      <div class="row-main">
+        <p class="row-title">Fire Evacuation Procedure — All Sites</p>
+        <div class="row-meta">
+          <span class="tag-pill">Health &amp; Safety</span>
+          <span class="dot">•</span>
+          <span>1.1 MB</span>
+          <span class="dot">•</span>
+          <span>Updated 29 Jul 2026</span>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn-icon" title="Edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="btn-icon" title="Download">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </button>
+        <button class="btn-icon danger" title="Delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="file-icon">PDF</div>
+      <div class="row-main">
+        <p class="row-title">Rota &amp; Cover Escalation Process</p>
+        <div class="row-meta">
+          <span class="tag-pill">Operations</span>
+          <span class="dot">•</span>
+          <span>76 KB</span>
+          <span class="dot">•</span>
+          <span>Updated 11 Jul 2026</span>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn-icon" title="Edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="btn-icon" title="Download">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </button>
+        <button class="btn-icon danger" title="Delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <strong>Note on this mockup:</strong> search, tag filters, and the buttons above are visual only — nothing is wired up. This is for layout and content review before we write the build prompt.
+  </div>
+
+</div>
+
+<!-- Upload modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Upload policy</h2>
+    <p class="sub">Admins only. Uploading with an existing title will replace that policy's file.</p>
+
+    <div class="field">
+      <label>Title</label>
+      <input type="text" placeholder="e.g. Safeguarding & Child Protection Policy">
+    </div>
+
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-picker">
+        <div class="chip active">Safeguarding</div>
+        <div class="chip">HR</div>
+        <div class="chip">Health &amp; Safety</div>
+        <div class="chip">Operations</div>
+        <div class="chip">Other</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>File</label>
+      <div class="dropzone">
+        <strong>Click to choose a PDF</strong> or drag it here<br>PDF only, up to 20 MB
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('overlay').classList.remove('show')">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('overlay').classList.remove('show')">Upload</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

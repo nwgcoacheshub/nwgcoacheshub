@@ -301,6 +301,7 @@ export default function NavBar({
             items={[
               { label: "HR Links", disabled: true },
               { label: "My Compliance", disabled: true },
+              { label: "Policies", href: "/people/policies" },
             ]}
           />
           {isAdmin && (
