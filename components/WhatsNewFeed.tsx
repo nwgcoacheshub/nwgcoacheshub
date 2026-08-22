@@ -345,9 +345,13 @@ export default function WhatsNewFeed({
                     e.stopPropagation();
                     toggleExpanded(item.id);
                   }}
-                  className="min-w-0 flex-1 text-left text-sm font-semibold text-ink"
+                  className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm font-semibold text-ink"
                 >
-                  {item.title}
+                  {/* Same fixed accent as the dashboard panel. Sits inside the
+                      title button so it renders identically whether the row is
+                      collapsed or expanded — only the content below changes. */}
+                  <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
+                  <span className="min-w-0">{item.title}</span>
                 </button>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-[11.5px] text-slate-light">

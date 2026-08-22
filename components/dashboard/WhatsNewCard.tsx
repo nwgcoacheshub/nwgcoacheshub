@@ -41,8 +41,12 @@ export default async function WhatsNewCard() {
       ) : (
         newsItems.map((item) => (
           <div key={item.id} className="border-b border-line px-[18px] py-3 last:border-b-0">
-            <div className="text-[13.5px] font-semibold leading-[1.35] text-ink">
-              {item.title}
+            <div className="flex items-start gap-2 text-[13.5px] font-semibold leading-[1.35] text-ink">
+              {/* Decorative only, and deliberately fixed: the placeholder's dot
+                  was colour-coded by a category whats_new has no column for, so
+                  this is one accent shared by every item rather than a signal. */}
+              <span className="mt-[6px] h-[7px] w-[7px] shrink-0 rounded-full bg-orange" />
+              <span className="min-w-0">{item.title}</span>
             </div>
             <p className="mt-1 line-clamp-2 text-[12.5px] leading-[1.45] text-slate">
               {item.body}
