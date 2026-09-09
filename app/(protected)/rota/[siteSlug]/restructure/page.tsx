@@ -136,6 +136,18 @@ export default async function RotaRestructurePage({
         initialRoster={(rosterRes.data ?? []) as RosterRow[]}
         initialClasses={(classesRes.data ?? []) as ClassRow[]}
         canEdit={canEdit}
+        // Undated export, same as the Standard Rota: a Restructure has no
+        // calendar date, so `week: null` keeps dates off the header and off
+        // every day column. Only the header wording and file name differ.
+        exportSpec={{
+          siteName: site.name,
+          fileBase: `${site.slug}-restructure`,
+          week: null,
+          undated: {
+            label: "Restructure",
+            note: "one-off snapshot, no dates",
+          },
+        }}
       />
     </main>
   );

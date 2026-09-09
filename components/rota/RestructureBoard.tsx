@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { restructureDataSource } from "@/lib/rota/rotaDataSource";
+import type { RotaExportSpec } from "./RotaExportButton";
 import styles from "./rota-board.module.css";
 import RotaBoard, {
   type CatalogueItem,
@@ -19,8 +20,8 @@ import { useGenerateRestructure } from "./useGenerateRestructure";
  *
  * There's no date dimension here — one Restructure per site, not one per
  * site+week — so unlike WeeklyRotaBoard there's no week range/nav to carry.
- * PDF export isn't wired up for this view yet; that's a deliberate exclusion
- * for this session rather than an oversight.
+ * That also makes its PDF an undated export, the same mode the Standard Rota
+ * uses: day names only, no dates anywhere on the page.
  *
  * Regenerating throws away edits made since it was last built, so like the
  * weekly board it's behind a confirmation step.
@@ -35,6 +36,7 @@ export default function RestructureBoard({
   initialCoaches,
   initialRoster,
   initialClasses,
+  exportSpec,
   canEdit,
 }: {
   siteId: string;
@@ -47,6 +49,7 @@ export default function RestructureBoard({
   initialCoaches: Coach[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
+  exportSpec: RotaExportSpec;
   /**
    * Resolved server-side by getCanEditRota(). Gates regeneration as well as
    * the board itself: upsert_restructure carries the same job_title check, so
@@ -86,6 +89,7 @@ export default function RestructureBoard({
         initialCoaches={initialCoaches}
         initialRoster={initialRoster}
         initialClasses={initialClasses}
+        exportSpec={exportSpec}
         canEdit={canEdit}
         toolbarExtra={
           <button

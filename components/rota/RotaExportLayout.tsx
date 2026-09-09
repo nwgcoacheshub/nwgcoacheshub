@@ -10,9 +10,10 @@
  * loaded before the capture runs.
  *
  * It renders both modes off one `week` prop: a real calendar week puts dates in
- * the header and next to each day name, and the undated Standard Rota template
- * carries day names only, matching the board's own convention of showing no
- * dates at all on the standard view.
+ * the header and next to each day name, and an undated board — the Standard
+ * Rota template or a Restructure — carries day names only, matching those
+ * boards' own convention of showing no dates at all. The two undated boards
+ * differ in header text alone; the page below it is laid out identically.
  */
 
 import { DAY_NAMES, fmtClock, DAY_START, DAY_END } from "@/lib/rota/board";
@@ -57,12 +58,29 @@ import {
 } from "@/lib/rota/exportLayout";
 import type { Category, ClassRow } from "./RotaBoard";
 
-/** Which week this is, or null for the undated Standard Rota template. */
+/** Which week this is, or null for an undated board. */
 export type ExportWeek = {
   /** "4–10 Aug 2026", as shown above the board on the weekly route. */
   rangeLabel: string;
   /** Mon–Sun, e.g. ["4 Aug", "5 Aug", …]. */
   dayDates: string[];
+};
+
+/**
+ * How an undated board names itself in the header. Header text is the only
+ * thing that varies between the Standard Rota and a Restructure export.
+ */
+export type UndatedLabels = {
+  /** Follows the site name in the title, e.g. "Standard Rota". */
+  label: string;
+  /** Follows the time range in the subtitle. */
+  note: string;
+};
+
+/** What an undated export says when the caller doesn't say otherwise. */
+const STANDARD_ROTA_LABELS: UndatedLabels = {
+  label: "Standard Rota",
+  note: "repeating weekly template, no dates",
 };
 
 const HEADER_TITLE_PX = 15.5;
@@ -71,23 +89,27 @@ const HEADER_SUB_PX = 9.5;
 export default function RotaExportLayout({
   siteName,
   week,
+  undated,
   plan,
   categories,
   coachNameById,
 }: {
   siteName: string;
   week: ExportWeek | null;
+  /** Header wording when `week` is null. Ignored when it isn't. */
+  undated?: UndatedLabels;
   plan: ExportPlan;
   categories: Category[];
   coachNameById: Map<string, string>;
 }) {
   const categoryByKey = new Map(categories.map((c) => [c.key, c]));
+  const labels = undated ?? STANDARD_ROTA_LABELS;
   const title = week
     ? `${siteName} — Week of ${week.rangeLabel}`
-    : `${siteName} — Standard Rota`;
+    : `${siteName} — ${labels.label}`;
   const subtitle = week
     ? `Monday to Sunday · ${fmtClock(DAY_START)} – ${fmtClock(DAY_END)}`
-    : `Monday to Sunday · ${fmtClock(DAY_START)} – ${fmtClock(DAY_END)} · repeating weekly template, no dates`;
+    : `Monday to Sunday · ${fmtClock(DAY_START)} – ${fmtClock(DAY_END)} · ${labels.note}`;
 
   return (
     <div
@@ -326,8 +348,8 @@ function DayHead({
       >
         {name}
       </span>
-      {/* Dates only ever render in weekly mode — `date` is null for the
-          Standard Rota, so nothing dated reaches the page at all. */}
+      {/* Dates only ever render in weekly mode — `date` is null for an
+          undated board, so nothing dated reaches the page at all. */}
       {date && (
         <span style={{ fontSize: plan.tier.dayDate, lineHeight: 1.1, color: INK_SOFT }}>
           {date}

@@ -7,7 +7,10 @@ import {
   planExport,
   type ExportPlan,
 } from "@/lib/rota/exportLayout";
-import RotaExportLayout, { type ExportWeek } from "./RotaExportLayout";
+import RotaExportLayout, {
+  type ExportWeek,
+  type UndatedLabels,
+} from "./RotaExportLayout";
 import type { Category, ClassRow, Coach, RosterRow } from "./RotaBoard";
 
 /**
@@ -17,10 +20,19 @@ import type { Category, ClassRow, Coach, RosterRow } from "./RotaBoard";
  */
 export type RotaExportSpec = {
   siteName: string;
-  /** Download name without the extension — "leeds-standard-rota", "leeds-week-2026-08-04". */
+  /**
+   * Download name without the extension — "leeds-standard-rota",
+   * "leeds-restructure", "leeds-week-2026-08-04". Distinct per view, so the
+   * three PDFs are told apart by name alone.
+   */
   fileBase: string;
-  /** A real week's dates, or null for the undated Standard Rota. */
+  /** A real week's dates, or null for an undated board. */
   week: ExportWeek | null;
+  /**
+   * Which undated board this is, in the header. Only read when `week` is null,
+   * and defaults to the Standard Rota's wording when omitted.
+   */
+  undated?: UndatedLabels;
 };
 
 /**
@@ -172,6 +184,7 @@ export default function RotaExportButton({
             <RotaExportLayout
               siteName={spec.siteName}
               week={spec.week}
+              undated={spec.undated}
               plan={plan}
               categories={categories}
               coachNameById={coachNameById}
