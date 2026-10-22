@@ -186,7 +186,6 @@ new button or input rather than the larger originals.
 | `id` | uuid | PK, FK → `auth.users.id` |
 | `email` | text | Synced from auth user |
 | `full_name` | text | |
-| `role` | text | **Legacy, unused.** Was `'admin'` \| `'coach'`. No app code or policy reads it; dropped in P5 |
 | `job_title` | text | Company job title — **fixed dropdown**, not free text (list below) |
 | `site` | text | One of the 7 NWG sites, or `'Head Office'` |
 | `active` | boolean | Default `true`. Drives soft-delete/deactivation on the Users page |
@@ -205,7 +204,8 @@ Permissions below. Changing someone's job title is changing what they can do.
 
 ### Permissions (job-title capabilities)
 Since migrations 0026 (database) and 0027 + P4 (app), permissions come from
-`profiles.job_title`. `profiles.role` is not read anywhere.
+`profiles.job_title`. `profiles.role`, `is_admin()` and `can_edit_rota()` were dropped in
+0028 (P5).
 
 | Capability | Held by |
 |---|---|
@@ -237,9 +237,14 @@ applies at the holder's own `profiles.site`, or at every site with `all_sites_sc
   forgot-password flow: full-access accounts have their password reset in the Supabase
   dashboard.
 - Migration 0027 must be applied before the P4 app code is deployed.
+- **anon holds no grant** on any public table or function (0023, 0025, 0028). Since 0028,
+  objects created in `public` by `postgres` no longer default to anon either. A new
+  function still needs `revoke execute ... from public` and `from anon`, then an explicit
+  grant to `authenticated`.
 
 ### Seed row (include in the initial migration)
-Historical: this is what 0001 inserted. The `role` value is legacy and no longer read.
+Historical: this is what 0001 inserted. `role` was dropped in 0028, so it no longer runs as
+written.
 ```sql
 insert into profiles (email, full_name, role, job_title, site, active) values
 ('jamie@nilewilsongymnastics.com', 'Jamie Harrison', 'admin', 'Head of Gymnastics', 'Head Office', true);

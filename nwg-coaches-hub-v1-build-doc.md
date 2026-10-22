@@ -62,13 +62,12 @@ For reference when building the static markup — none of this queries real data
 | `id` | uuid | PK, FK → `auth.users.id` |
 | `email` | text | Synced from auth user |
 | `full_name` | text | |
-| `role` | text | **Legacy, unused** (was `'admin'` \| `'coach'`). Dropped in P5 |
 | `job_title` | text | Company job title (fixed dropdown, see below) |
 | `site` | text | One of the 7 NWG sites, or `'Head Office'` for corporate/regional roles |
 | `active` | boolean | Default `true`. Drives soft-delete/deactivation |
 | `created_at` | timestamptz | Default `now()` |
 
-Your row was pre-seeded in 0001 as Head of Gymnastics (with the now-unused `role = 'admin'`).
+Your row was pre-seeded in 0001 as Head of Gymnastics.
 
 **`job_title` dropdown values:**
 - Coach
@@ -89,7 +88,7 @@ No tables needed for v1 — Weekly Focus, Programme tiles, How-do-I strip, What'
 
 - **SELECT:** a user can read their own row; active `manage_users` holders can read all rows.
 - **UPDATE:** active `manage_users` holders can update any row (`full_name`, `job_title`, `site`, `active`). Nobody else can update any row, including their own.
-- **Self-edit trigger** (`profiles_guard_privileged_columns`, 0026): nobody may change their own `job_title`, `site` or `active`, even with `manage_users`.
+- **Self-edit trigger** (`profiles_guard_privileged_columns`, 0026; narrowed to these three columns in 0028): nobody may change their own `job_title`, `site` or `active`, even with `manage_users`.
 - **INSERT / DELETE:** blocked entirely at the client level — only ever done via the server-side function below, using the service-role key.
 
 ---

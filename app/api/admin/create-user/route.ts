@@ -7,7 +7,7 @@ import { JOB_TITLES, SITES } from "@/lib/profileOptions";
 // manage_users holder only.
 //
 // Permissions come from job_title alone. Any `role` in the request body is
-// ignored and never written; the column keeps its default until P5 drops it.
+// ignored; profiles has no role column (dropped in 0028).
 
 export async function POST(request: Request) {
   const guard = await requireCapability("manage_users");
