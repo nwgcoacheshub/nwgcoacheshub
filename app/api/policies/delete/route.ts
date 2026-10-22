@@ -1,16 +1,16 @@
 // POST /api/policies/delete — remove a policy document and its row.
 //
-// Admin-only, re-checked server-side, matching 0023's policies_delete_admin_only
-// (`is_active_coach() and is_admin()`).
+// manage_policies only, re-checked server-side, matching 0026's
+// policies_delete_manage_policies.
 
 import { NextResponse } from "next/server";
-import { requireActiveAdmin } from "@/lib/admin-guard";
+import { requireCapability } from "@/lib/admin-guard";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { removePolicyObject } from "@/lib/policies/storage";
 import { isUuid } from "@/lib/policies/validation";
 
 export async function POST(request: Request) {
-  const guard = await requireActiveAdmin();
+  const guard = await requireCapability("manage_policies");
   if ("error" in guard) {
     return NextResponse.json({ error: guard.error }, { status: guard.status });
   }

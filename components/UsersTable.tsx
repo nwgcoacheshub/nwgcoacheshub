@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
-import { ROLES, JOB_TITLES, SITES, type Role, type JobTitle, type Site } from "@/lib/profileOptions";
+import { JOB_TITLES, SITES, type JobTitle, type Site } from "@/lib/profileOptions";
 import Modal from "@/components/Modal";
 import {
   inputClass,
@@ -16,11 +16,26 @@ type Profile = {
   id: string;
   email: string;
   full_name: string | null;
-  role: string;
   job_title: string;
   site: string;
   active: boolean;
 };
+
+// Nobody may change their own job title, site or active status: in the
+// database, 0026's profiles_guard_privileged_columns trigger refuses it with
+// 42501, because changing your own job title is granting yourself permissions.
+// The UI disables those controls on your own row and turns a 42501 into a plain
+// sentence rather than showing the raw Postgres error.
+const SELF_EDIT_MESSAGE = "You can't change your own job title, site or status.";
+
+type UserUpdates = { full_name: string; job_title?: JobTitle; site?: Site };
+
+function updateErrorMessage(error: { code?: string; message: string }, isSelf: boolean) {
+  if (error.code !== "42501") return error.message;
+  return isSelf ? SELF_EDIT_MESSAGE : "You don't have permission to change this account.";
+}
+
+const disabledSelectClass = `${inputClass} disabled:cursor-not-allowed disabled:opacity-60`;
 
 function StatusPill({ active }: { active: boolean }) {
   return (
@@ -34,7 +49,13 @@ function StatusPill({ active }: { active: boolean }) {
   );
 }
 
-export default function UsersTable({ initialUsers }: { initialUsers: Profile[] }) {
+export default function UsersTable({
+  initialUsers,
+  currentUserId,
+}: {
+  initialUsers: Profile[];
+  currentUserId: string;
+}) {
   const [users, setUsers] = useState<Profile[]>(initialUsers);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -48,7 +69,7 @@ export default function UsersTable({ initialUsers }: { initialUsers: Profile[] }
   async function refreshUsers() {
     const { data } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, job_title, site, active")
+      .select("id, email, full_name, job_title, site, active")
       .order("full_name");
     if (data) setUsers(data);
   }
@@ -62,16 +83,16 @@ export default function UsersTable({ initialUsers }: { initialUsers: Profile[] }
       .eq("id", user.id);
     setBusyId(null);
     if (updateError) {
-      setError(updateError.message);
+      setError(updateErrorMessage(updateError, user.id === currentUserId));
       return;
     }
     await refreshUsers();
   }
 
-  async function handleEditSave(userId: string, updates: { full_name: string; role: Role; job_title: JobTitle; site: Site }) {
+  async function handleEditSave(userId: string, updates: UserUpdates) {
     const { error: updateError } = await supabase.from("profiles").update(updates).eq("id", userId);
     if (updateError) {
-      return updateError.message;
+      return updateErrorMessage(updateError, userId === currentUserId);
     }
     await refreshUsers();
     setEditUser(null);
@@ -81,7 +102,6 @@ export default function UsersTable({ initialUsers }: { initialUsers: Profile[] }
   async function handleAddUser(payload: {
     email: string;
     full_name: string;
-    role: Role;
     job_title: JobTitle;
     site: Site;
     temp_password: string;
@@ -134,7 +154,6 @@ export default function UsersTable({ initialUsers }: { initialUsers: Profile[] }
           <tr className="border-b border-line text-[12px] font-bold uppercase tracking-[0.4px] text-slate-light">
             <th className="px-5 py-3">Name</th>
             <th className="px-5 py-3">Email</th>
-            <th className="px-5 py-3">Role</th>
             <th className="px-5 py-3">Job title</th>
             <th className="px-5 py-3">Site</th>
             <th className="px-5 py-3">Status</th>
@@ -142,41 +161,54 @@ export default function UsersTable({ initialUsers }: { initialUsers: Profile[] }
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.id} className="border-b border-line last:border-b-0">
-              <td className="px-5 py-3 font-semibold text-ink">{user.full_name}</td>
-              <td className="px-5 py-3 text-slate">{user.email}</td>
-              <td className="px-5 py-3 capitalize text-slate">{user.role}</td>
-              <td className="px-5 py-3 text-slate">{user.job_title}</td>
-              <td className="px-5 py-3 text-slate">{user.site}</td>
-              <td className="px-5 py-3">
-                <StatusPill active={user.active} />
-              </td>
-              <td className="px-5 py-3">
-                <div className="flex flex-wrap gap-1.5">
-                  <button className={rowActionClass} onClick={() => setEditUser(user)}>
-                    Edit
-                  </button>
-                  <button className={rowActionClass} onClick={() => setResetUser(user)}>
-                    Reset password
-                  </button>
-                  <button
-                    className={rowActionClass}
-                    disabled={busyId === user.id}
-                    onClick={() => handleToggleActive(user)}
-                  >
-                    {user.active ? "Deactivate" : "Reactivate"}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {users.map((user) => {
+            const isSelf = user.id === currentUserId;
+            return (
+              <tr key={user.id} className="border-b border-line last:border-b-0">
+                <td className="px-5 py-3 font-semibold text-ink">{user.full_name}</td>
+                <td className="px-5 py-3 text-slate">{user.email}</td>
+                <td className="px-5 py-3 text-slate">{user.job_title}</td>
+                <td className="px-5 py-3 text-slate">{user.site}</td>
+                <td className="px-5 py-3">
+                  <StatusPill active={user.active} />
+                </td>
+                <td className="px-5 py-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button className={rowActionClass} onClick={() => setEditUser(user)}>
+                      Edit
+                    </button>
+                    <button
+                      className={rowActionClass}
+                      disabled={isSelf}
+                      title={isSelf ? "Full-access passwords are reset in the Supabase dashboard." : undefined}
+                      onClick={() => setResetUser(user)}
+                    >
+                      Reset password
+                    </button>
+                    <button
+                      className={rowActionClass}
+                      disabled={isSelf || busyId === user.id}
+                      title={isSelf ? SELF_EDIT_MESSAGE : undefined}
+                      onClick={() => handleToggleActive(user)}
+                    >
+                      {user.active ? "Deactivate" : "Reactivate"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
       {addOpen && <AddUserModal onClose={() => setAddOpen(false)} onSubmit={handleAddUser} />}
       {editUser && (
-        <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSubmit={handleEditSave} />
+        <EditUserModal
+          user={editUser}
+          isSelf={editUser.id === currentUserId}
+          onClose={() => setEditUser(null)}
+          onSubmit={handleEditSave}
+        />
       )}
       {resetUser && (
         <ResetPasswordModal
@@ -197,7 +229,6 @@ function AddUserModal({
   onSubmit: (payload: {
     email: string;
     full_name: string;
-    role: Role;
     job_title: JobTitle;
     site: Site;
     temp_password: string;
@@ -205,7 +236,6 @@ function AddUserModal({
 }) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<Role>("coach");
   const [jobTitle, setJobTitle] = useState<JobTitle>("Coach");
   const [site, setSite] = useState<Site>("Head Office");
   const [tempPassword, setTempPassword] = useState("");
@@ -219,7 +249,6 @@ function AddUserModal({
     const result = await onSubmit({
       email,
       full_name: fullName,
-      role,
       job_title: jobTitle,
       site,
       temp_password: tempPassword,
@@ -252,31 +281,19 @@ function AddUserModal({
             className={inputClass}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClass}>Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value as Role)} className={inputClass}>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Job title</label>
-            <select
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value as JobTitle)}
-              className={inputClass}
-            >
-              {JOB_TITLES.map((jt) => (
-                <option key={jt} value={jt}>
-                  {jt}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className={labelClass}>Job title</label>
+          <select
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value as JobTitle)}
+            className={inputClass}
+          >
+            {JOB_TITLES.map((jt) => (
+              <option key={jt} value={jt}>
+                {jt}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelClass}>Site</label>
@@ -314,18 +331,16 @@ function AddUserModal({
 
 function EditUserModal({
   user,
+  isSelf,
   onClose,
   onSubmit,
 }: {
   user: Profile;
+  isSelf: boolean;
   onClose: () => void;
-  onSubmit: (
-    userId: string,
-    updates: { full_name: string; role: Role; job_title: JobTitle; site: Site }
-  ) => Promise<string | null>;
+  onSubmit: (userId: string, updates: UserUpdates) => Promise<string | null>;
 }) {
   const [fullName, setFullName] = useState(user.full_name ?? "");
-  const [role, setRole] = useState<Role>(user.role as Role);
   const [jobTitle, setJobTitle] = useState<JobTitle>(user.job_title as JobTitle);
   const [site, setSite] = useState<Site>(user.site as Site);
   const [error, setError] = useState<string | null>(null);
@@ -335,7 +350,12 @@ function EditUserModal({
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    const result = await onSubmit(user.id, { full_name: fullName, role, job_title: jobTitle, site });
+    // Your own row sends only the name, so the guarded columns are never part
+    // of the update at all.
+    const result = await onSubmit(
+      user.id,
+      isSelf ? { full_name: fullName } : { full_name: fullName, job_title: jobTitle, site }
+    );
     setSubmitting(false);
     if (result) setError(result);
   }
@@ -354,35 +374,29 @@ function EditUserModal({
             className={inputClass}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClass}>Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value as Role)} className={inputClass}>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Job title</label>
-            <select
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value as JobTitle)}
-              className={inputClass}
-            >
-              {JOB_TITLES.map((jt) => (
-                <option key={jt} value={jt}>
-                  {jt}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className={labelClass}>Job title</label>
+          <select
+            value={jobTitle}
+            disabled={isSelf}
+            onChange={(e) => setJobTitle(e.target.value as JobTitle)}
+            className={disabledSelectClass}
+          >
+            {JOB_TITLES.map((jt) => (
+              <option key={jt} value={jt}>
+                {jt}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelClass}>Site</label>
-          <select value={site} onChange={(e) => setSite(e.target.value as Site)} className={inputClass}>
+          <select
+            value={site}
+            disabled={isSelf}
+            onChange={(e) => setSite(e.target.value as Site)}
+            className={disabledSelectClass}
+          >
             {SITES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -390,6 +404,7 @@ function EditUserModal({
             ))}
           </select>
         </div>
+        {isSelf && <p className="text-[12.5px] text-slate-light">{SELF_EDIT_MESSAGE}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onClose} className={secondaryButtonClass}>
             Cancel

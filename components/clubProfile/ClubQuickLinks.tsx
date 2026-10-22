@@ -47,7 +47,7 @@ const TILES: { key: Panel; title: string; subtitle: string; icon: React.ReactNod
 /** The three quick-link tiles and the modals behind them. */
 export default function ClubQuickLinks({
   siteId,
-  isAdmin,
+  canManageRoles,
   currentUserId,
   heroes,
   workedTotals,
@@ -57,7 +57,7 @@ export default function ClubQuickLinks({
   siteAccounts,
 }: {
   siteId: string;
-  isAdmin: boolean;
+  canManageRoles: boolean;
   currentUserId: string | null;
   heroes: HeroSummary[];
   workedTotals: WorkedTotal[];
@@ -113,7 +113,7 @@ export default function ClubQuickLinks({
       {open === "roles" && (
         <StaffRolesModal
           roleGroups={roleGroups}
-          isAdmin={isAdmin}
+          canManageRoles={canManageRoles}
           siteId={siteId}
           siteAccounts={siteAccounts}
           onClose={() => setOpen(null)}

@@ -15,23 +15,24 @@ export type SiteAccount = { id: string; name: string };
 /**
  * Who holds which club role, grouped by category.
  *
- * Read-only for coaches; admins get an edit mode with removable chips and a
- * per-role picker. The database agrees: 0007 gives club_role_assignments a
- * site-scoped select policy but admin-only insert/update/delete, so a coach
- * who forced this into edit mode would still have every write rejected.
+ * Read-only unless the user holds manage_club_roles at this site, which gives
+ * an edit mode with removable chips and a per-role picker. The database
+ * agrees: club_role_assignments has a site-scoped select policy but
+ * manage_club_roles insert/update/delete (0026), so a coach who forced this
+ * into edit mode would still have every write rejected.
  *
  * The picker lists profiles at this site, because club_role_assignments.coach_id
  * references profiles — these are real accounts, not rota_coaches board entries.
  */
 export default function StaffRolesModal({
   roleGroups,
-  isAdmin,
+  canManageRoles,
   siteId,
   siteAccounts,
   onClose,
 }: {
   roleGroups: RoleGroup[];
-  isAdmin: boolean;
+  canManageRoles: boolean;
   siteId: string;
   siteAccounts: SiteAccount[];
   onClose: () => void;
@@ -86,7 +87,7 @@ export default function StaffRolesModal({
         <p className="text-[13px] text-slate-light">
           Who looks after what at this club.
         </p>
-        {isAdmin && (
+        {canManageRoles && (
           <button
             onClick={() => {
               setError(null);

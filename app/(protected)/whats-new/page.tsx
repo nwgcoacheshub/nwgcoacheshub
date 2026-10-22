@@ -1,4 +1,5 @@
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCapabilities } from "@/lib/capabilities";
 import { createClient } from "@/lib/supabaseServer";
 import WhatsNewFeed, { type WhatsNewItem } from "@/components/WhatsNewFeed";
 
@@ -7,9 +8,9 @@ import WhatsNewFeed, { type WhatsNewItem } from "@/components/WhatsNewFeed";
 //
 // Readable by every active coach, so unlike /admin/users there is no redirect
 // here: the (protected) layout already handles signed-out and deactivated
-// accounts. `role` only decides whether the write controls render, and 0025's
-// insert/update/delete policies re-check is_admin() in the database, so a coach
-// who forced isAdmin true in the browser would still be refused.
+// accounts. publish_whats_new only decides whether the write controls render,
+// and 0026's insert/update/delete policies re-check it in the database, so a
+// coach who forced canPublish true in the browser would still be refused.
 
 // ?id=<uuid> comes from clicking an item in the dashboard panel, and means
 // "open this one on arrival". It is read here rather than with
@@ -26,8 +27,9 @@ export default async function WhatsNewPage({
 }: {
   searchParams: Promise<{ id?: string | string[] }>;
 }) {
-  const { user, profile } = await getCurrentProfile();
-  const isAdmin = profile?.role === "admin";
+  const { user } = await getCurrentProfile();
+  const { caps } = await getCapabilities();
+  const canPublish = caps.has("publish_whats_new");
   const { id } = await searchParams;
 
   // RLS-gated select: whats_new_select_authenticated (0025) requires
@@ -58,7 +60,7 @@ export default async function WhatsNewPage({
       </div>
 
       <WhatsNewFeed
-        isAdmin={isAdmin}
+        canPublish={canPublish}
         currentUserId={user?.id ?? null}
         initialItems={(items ?? []) as WhatsNewItem[]}
         focusId={focusId}

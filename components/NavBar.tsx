@@ -115,11 +115,11 @@ function NavDropdown({
 }
 
 export default function NavBar({
-  isAdmin,
+  canManageUsers,
   fullName,
   clubSites,
 }: {
-  isAdmin: boolean;
+  canManageUsers: boolean;
   fullName: string;
   /**
    * Sites the current user may open a Club Profile for, from rota_sites via
@@ -304,7 +304,7 @@ export default function NavBar({
               { label: "Policies", href: "/people/policies" },
             ]}
           />
-          {isAdmin && (
+          {canManageUsers && (
             <NavDropdown
               id="admin"
               active={pathname.startsWith("/admin")}

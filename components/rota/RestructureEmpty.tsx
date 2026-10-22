@@ -17,9 +17,9 @@ export default function RestructureEmpty({
   siteId: string;
   siteName: string;
   /**
-   * Resolved server-side by getCanEditRota(). upsert_restructure carries the
-   * same job_title check, so generating is blocked for a Coach-level account
-   * whether or not this button is offered.
+   * Resolved server-side as edit_rota at this site. upsert_restructure carries
+   * the same edit_rota check (0026), so generating is blocked for a Coach-level
+   * account whether or not this button is offered.
    */
   canEdit: boolean;
 }) {

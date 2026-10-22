@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
-import { getCanEditRota } from "@/lib/rota/canEdit";
+import { getCapabilities, hasSiteCapability } from "@/lib/capabilities";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
 import RotaViewTabs from "@/components/rota/RotaViewTabs";
@@ -36,8 +36,8 @@ export default async function RotaRestructurePage({
   }
 
   // Same split as the other two pages: site visibility and write rights are
-  // separate questions, and getCurrentProfile() is cached per request.
-  const canEdit = await getCanEditRota();
+  // separate questions, and getCapabilities() is cached per request.
+  const canEdit = hasSiteCapability(await getCapabilities(), "edit_rota", site.id);
   const supabase = await createClient();
 
   // Keyed on site_id alone — there is never more than one Restructure per

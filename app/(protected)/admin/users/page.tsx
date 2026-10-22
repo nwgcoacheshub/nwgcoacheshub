@@ -1,19 +1,23 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCapabilities } from "@/lib/capabilities";
 import { createClient } from "@/lib/supabaseServer";
 import UsersTable from "@/components/UsersTable";
 
 export default async function UsersPage() {
-  const { profile } = await getCurrentProfile();
+  const { user } = await getCurrentProfile();
+  const { caps } = await getCapabilities();
 
-  if (!profile || profile.role !== "admin") {
+  // profiles_select_own_or_manage_users (0026) would return only the caller's
+  // own row to anyone else anyway; this just sends them somewhere useful.
+  if (!user || !caps.has("manage_users")) {
     redirect("/");
   }
 
   const supabase = await createClient();
   const { data: users } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, job_title, site, active")
+    .select("id, email, full_name, job_title, site, active")
     .order("full_name");
 
   return (
@@ -25,10 +29,10 @@ export default async function UsersPage() {
         </div>
       </div>
       <div className="mb-6 text-sm text-slate-light">
-        Add, edit, deactivate and reset passwords for coach and admin accounts.
+        Add, edit, deactivate and reset passwords for Hub accounts.
       </div>
 
-      <UsersTable initialUsers={users ?? []} />
+      <UsersTable initialUsers={users ?? []} currentUserId={user.id} />
     </main>
   );
 }

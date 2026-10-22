@@ -50,10 +50,10 @@ export default function WeeklyRotaBoard({
   initialClasses: ClassRow[];
   exportSpec: RotaExportSpec;
   /**
-   * Resolved server-side by getCanEditRota(). Gates regeneration as well as the
-   * board itself: migration 0013 added the same job_title check inside
-   * upsert_weekly_rota, so a Coach-level account is rejected by the RPC before
-   * any row is touched.
+   * Resolved server-side as edit_rota at this site. Gates regeneration as well
+   * as the board itself: upsert_weekly_rota carries the same edit_rota check
+   * (0026), so a Coach-level account is rejected by the RPC before any row is
+   * touched.
    */
   canEdit: boolean;
 }) {

@@ -1,8 +1,9 @@
-// Fixed dropdown values — must stay in sync with the check constraints in
-// supabase/migrations/0001_init.sql.
-
-export const ROLES = ["admin", "coach"] as const;
-export type Role = (typeof ROLES)[number];
+// Fixed dropdown values — must stay in sync with the check constraints on
+// profiles: job_title (0026_capability_helpers.sql) and site (0001_init.sql).
+//
+// job_title drives permissions, but this list only feeds the dropdown and the
+// create-user validation. Which titles hold which capability lives in the
+// database (title_has_capability, 0026) and is never copied here.
 
 export const JOB_TITLES = [
   "Coach",
@@ -10,7 +11,6 @@ export const JOB_TITLES = [
   "Club Head Coach",
   "Regional General Manager",
   "Head of Gymnastics",
-  "Head of People",
   "Head of Operations",
 ] as const;
 export type JobTitle = (typeof JOB_TITLES)[number];

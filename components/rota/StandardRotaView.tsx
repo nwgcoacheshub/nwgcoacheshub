@@ -37,7 +37,7 @@ export default function StandardRotaView({
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
   exportSpec: RotaExportSpec;
-  /** Resolved server-side by getCanEditRota(); passed straight through. */
+  /** edit_rota at this site, resolved server-side; passed straight through. */
   canEdit: boolean;
 }) {
   const dataSource = useMemo(() => standardDataSource(siteId), [siteId]);

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
-import { getCanEditRota } from "@/lib/rota/canEdit";
+import { getCapabilities, hasSiteCapability } from "@/lib/capabilities";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
 import { currentMonday, londonToday, parseWeekDate, weekRangeLabel } from "@/lib/rota/week";
 import { resolveProfileNames, displayName } from "@/lib/clubProfile/names";
@@ -51,9 +51,13 @@ export default async function ClubProfileSitePage({
     redirect(`/club-profile/${access.homeSlug}`);
   }
 
-  const { user, profile } = await getCurrentProfile();
-  const isAdmin = profile?.role === "admin";
-  const canEditMeetings = await getCanEditRota();
+  const { user } = await getCurrentProfile();
+  // Each control follows its own site-scoped capability (0026), so a Lead Coach
+  // can post club updates and manage meetings here but not edit staff roles.
+  const capabilities = await getCapabilities();
+  const canManageUpdates = hasSiteCapability(capabilities, "manage_club_updates", site.id);
+  const canManageRoles = hasSiteCapability(capabilities, "manage_club_roles", site.id);
+  const canEditMeetings = hasSiteCapability(capabilities, "manage_club_meetings", site.id);
   const supabase = await createClient();
 
   const monday = currentMonday();
@@ -181,16 +185,14 @@ export default async function ClubProfileSitePage({
     ...assignments.map((a) => a.coach_id),
   ]);
 
-  // The add-coach picker in Staff Roles lists accounts at this site. Only
-  // fetched for admins: they're the only ones who can write an assignment, and
-  // profiles RLS would return nothing but their own row for anyone else.
-  const { data: siteAccounts } = isAdmin
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("site", site.name)
-        .eq("active", true)
-        .order("full_name")
+  // The add-coach picker in Staff Roles lists active accounts at this site.
+  // Only fetched for someone who can write an assignment here. It goes through
+  // site_role_candidates() (0027) rather than selecting from profiles: profiles
+  // RLS returns only the caller's own row to anyone without manage_users, so a
+  // Club Head Coach would otherwise see nobody but themselves. The RPC re-checks
+  // manage_club_roles at this site and returns nothing to anyone else.
+  const { data: siteAccounts } = canManageRoles
+    ? await supabase.rpc("site_role_candidates", { p_site_id: site.id })
     : { data: [] as { id: string; full_name: string | null }[] };
 
   const initialUpdates: ClubUpdate[] = updates.map((u) => ({
@@ -277,7 +279,7 @@ export default async function ClubProfileSitePage({
 
       <ClubUpdates
         siteId={site.id}
-        isAdmin={isAdmin}
+        canManage={canManageUpdates}
         currentUserId={user?.id ?? null}
         initialUpdates={initialUpdates}
       />
@@ -301,14 +303,14 @@ export default async function ClubProfileSitePage({
 
       <ClubQuickLinks
         siteId={site.id}
-        isAdmin={isAdmin}
+        canManageRoles={canManageRoles}
         currentUserId={user?.id ?? null}
         heroes={heroSummaries}
         workedTotals={sumWorkedMinutes(roster, coaches)}
         weekRange={weekRange}
         weekGenerated={Boolean(weekly)}
         roleGroups={roleGroups}
-        siteAccounts={(siteAccounts ?? []).map((a) => ({
+        siteAccounts={((siteAccounts ?? []) as { id: string; full_name: string | null }[]).map((a) => ({
           id: a.id,
           name: a.full_name?.trim() || "Unnamed account",
         }))}

@@ -1,11 +1,11 @@
 // Turning profiles uuids into display names.
 //
 // This has to go through the resolve_profile_names() RPC (0008) rather than
-// selecting from profiles. profiles_select_own_or_admin (0001) lets a non-admin
-// coach read only their own row, so a direct select or an embedded join returns
-// *nothing* for everyone else — no error, just missing names. That failure is
-// invisible when you're testing as an admin, which is exactly why every
-// caller must come through here.
+// selecting from profiles. profiles_select_own_or_manage_users (0026) lets
+// anyone without manage_users read only their own row, so a direct select or an
+// embedded join returns *nothing* for everyone else — no error, just missing
+// names. That failure is invisible when you're testing as a full-access user,
+// which is exactly why every caller must come through here.
 //
 // Applies to the three profiles foreign keys: club_updates.created_by,
 // club_role_assignments.coach_id and hero_hours.logged_by_coach_id. It does NOT

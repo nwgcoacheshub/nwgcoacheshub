@@ -23,9 +23,9 @@ export default function WeeklyRotaEmpty({
   /** Same week, for reading, e.g. "4–10 Aug 2026". */
   weekRange: string;
   /**
-   * Resolved server-side by getCanEditRota(). upsert_weekly_rota carries the
-   * same job_title check since migration 0013, so generating is blocked for a
-   * Coach-level account whether or not this button is offered.
+   * Resolved server-side as edit_rota at this site. upsert_weekly_rota carries
+   * the same edit_rota check (0026), so generating is blocked for a Coach-level
+   * account whether or not this button is offered.
    */
   canEdit: boolean;
 }) {

@@ -1,13 +1,28 @@
 import { createClient } from "@/lib/supabaseServer";
+import type { Capability } from "@/lib/capabilities";
 
-type AdminGuardResult =
+// Server-side only. These guards run before a route handler touches the
+// service-role client, which bypasses RLS — so for those routes the guard is
+// the whole boundary.
+//
+// Everything reads through the RLS-respecting client as the caller. That read
+// works for a deactivated user because profiles' own-row select policy is
+// deliberately not gated on active (0014, kept in 0026) — gating it would break
+// the very check it exists to feed.
+
+type GuardResult =
   | { user: { id: string; email: string | undefined } }
   | { error: string; status: number };
 
-// Server-side only. Confirms the current session belongs to an admin before
-// an API route touches the service-role client. Reused by every admin route
-// so the check can't drift between them.
-export async function requireAdmin(): Promise<AdminGuardResult> {
+/**
+ * An active user holding `cap`.
+ *
+ * The decision is the database's: has_capability() (0026) checks the caller's
+ * own profile, requires active = true and applies the job-title matrix. No
+ * title list or role is consulted here, so the guard can't drift from RLS.
+ * Global capabilities only — every route that uses it acts across all sites.
+ */
+export async function requireCapability(cap: Capability): Promise<GuardResult> {
   const supabase = await createClient();
 
   const {
@@ -18,43 +33,20 @@ export async function requireAdmin(): Promise<AdminGuardResult> {
     return { error: "Not authenticated.", status: 401 };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data: allowed, error } = await supabase.rpc("has_capability", { p_cap: cap });
 
-  if (!profile || profile.role !== "admin") {
-    return { error: "Admin access required.", status: 403 };
+  if (error || allowed !== true) {
+    return { error: "You don't have permission to do this.", status: 403 };
   }
 
   return { user: { id: user.id, email: user.email } };
 }
 
-// ---------------------------------------------------------------------------
-// Active-account guards
-// ---------------------------------------------------------------------------
-//
-// requireAdmin() above reads profiles.role but not profiles.active, so a
-// deactivated admin still passes it. Migration 0014 established the opposite
-// rule for data access — is_active_coach() is the OUTER conjunct of every
-// policy precisely so deactivation bites on admins too — and the Policies
-// Library routes are the file-access boundary, so they hold to that rule.
-//
-// requireAdmin() is deliberately left as it is: changing it would change how
-// create-user and reset-password behave, which is not this feature's call to
-// make. The gap is real and worth closing separately.
-//
-// These read through the RLS-respecting client, so the caller can only ever see
-// their own profiles row. That read works for a deactivated user because 0014
-// deliberately did NOT gate profiles' own select policy on is_active_coach() —
-// gating it would have broken the very check it exists to feed.
-
-type ActiveProfileResult =
-  | { user: { id: string; email: string | undefined }; role: string }
-  | { error: string; status: number };
-
-async function loadActiveProfile(): Promise<ActiveProfileResult> {
+/**
+ * Any active Hub user, whatever their job title — the server-side equivalent of
+ * the is_active_coach() gate on policies_select_authenticated (0023).
+ */
+export async function requireActiveCoach(): Promise<GuardResult> {
   const supabase = await createClient();
 
   const {
@@ -67,7 +59,7 @@ async function loadActiveProfile(): Promise<ActiveProfileResult> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, active")
+    .select("active")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -79,28 +71,5 @@ async function loadActiveProfile(): Promise<ActiveProfileResult> {
     return { error: "This account has been deactivated.", status: 403 };
   }
 
-  return { user: { id: user.id, email: user.email }, role: profile.role };
-}
-
-/**
- * Any active Hub user, admin or not — the server-side equivalent of the
- * is_active_coach() gate on policies_select_authenticated (0023).
- */
-export async function requireActiveCoach(): Promise<ActiveProfileResult> {
-  return loadActiveProfile();
-}
-
-/**
- * An active admin — the equivalent of `is_active_coach() and is_admin()`, the
- * shape 0023's write policies use.
- */
-export async function requireActiveAdmin(): Promise<ActiveProfileResult> {
-  const result = await loadActiveProfile();
-  if ("error" in result) return result;
-
-  if (result.role !== "admin") {
-    return { error: "Admin access required.", status: 403 };
-  }
-
-  return result;
+  return { user: { id: user.id, email: user.email } };
 }

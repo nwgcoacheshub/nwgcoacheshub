@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requireCapability } from "@/lib/admin-guard";
 import { createAdminClient } from "@/lib/supabaseAdmin";
-import { ROLES, JOB_TITLES, SITES } from "@/lib/profileOptions";
+import { JOB_TITLES, SITES } from "@/lib/profileOptions";
+
+// Secret-key route, so requireCapability() is the whole boundary: an active
+// manage_users holder only.
+//
+// Permissions come from job_title alone. Any `role` in the request body is
+// ignored and never written; the column keeps its default until P5 drops it.
 
 export async function POST(request: Request) {
-  const guard = await requireAdmin();
+  const guard = await requireCapability("manage_users");
   if ("error" in guard) {
     return NextResponse.json({ error: guard.error }, { status: guard.status });
   }
 
   const body = await request.json();
-  const { email, full_name, role, job_title, site, temp_password } = body;
+  const { email, full_name, job_title, site, temp_password } = body;
 
-  if (!email || !full_name || !role || !job_title || !site || !temp_password) {
+  if (!email || !full_name || !job_title || !site || !temp_password) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
-  if (!ROLES.includes(role)) {
-    return NextResponse.json({ error: "Invalid role." }, { status: 400 });
-  }
   if (!JOB_TITLES.includes(job_title)) {
     return NextResponse.json({ error: "Invalid job title." }, { status: 400 });
   }
@@ -45,7 +48,6 @@ export async function POST(request: Request) {
     id: created.user.id,
     email,
     full_name,
-    role,
     job_title,
     site,
   });

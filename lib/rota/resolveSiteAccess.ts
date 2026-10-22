@@ -17,12 +17,12 @@ export type SiteAccess =
       profileSite: string | null;
     };
 
-export type AccessProfile = { role: string; site: string | null } | null;
+export type AccessProfile = { site: string | null; viewAllSites: boolean } | null;
 
 /**
  * Which rota sites a user may look at.
  *
- * - admin: every active site, free switching.
+ * - view_all_sites holder: every active site, free switching.
  * - anyone else: only the site whose `rota_sites.name` equals their
  *   `profiles.site`. It's a name match because `profiles.site` is free text
  *   and isn't a foreign key in this phase.
@@ -41,7 +41,7 @@ export function resolveSiteAccess(
     };
   }
 
-  if (profile?.role === "admin") {
+  if (profile?.viewAllSites) {
     return { ok: true, sites, canSwitch: true, homeSlug: sites[0].slug };
   }
 

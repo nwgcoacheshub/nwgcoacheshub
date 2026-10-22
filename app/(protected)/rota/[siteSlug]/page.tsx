@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
-import { getCanEditRota } from "@/lib/rota/canEdit";
+import { getCapabilities, hasSiteCapability } from "@/lib/capabilities";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
 import RotaViewTabs from "@/components/rota/RotaViewTabs";
@@ -33,11 +33,11 @@ export default async function RotaSitePage({
     redirect(`/rota/${access.homeSlug}`);
   }
 
-  // Which sites you may see and whether you may write are separate questions —
-  // the same split migration 0013 makes, where the job_title check and the site
-  // match are separate conjuncts. getCurrentProfile() is cached per request, so
-  // this reuses the profile getSiteAccess() already read.
-  const canEdit = await getCanEditRota();
+  // Which sites you may see and whether you may write here are separate
+  // questions: view_all_sites decides the first, edit_rota at this site the
+  // second (has_site_capability in 0026). getCapabilities() is cached per
+  // request, so this reuses the call getSiteAccess() already made.
+  const canEdit = hasSiteCapability(await getCapabilities(), "edit_rota", site.id);
 
   const supabase = await createClient();
 

@@ -1,7 +1,7 @@
 "use client";
 
 // The What's New page's whole interactive surface: the dense list, its
-// click-to-expand behaviour, and the admin create/edit/delete forms.
+// click-to-expand behaviour, and the create/edit/delete forms.
 //
 // One component file for the page, following PoliciesLibrary and UsersTable.
 // The CRUD shape — inline forms rather than modals, an inline delete
@@ -9,10 +9,10 @@
 // components/clubProfile/ClubUpdates.tsx, which writes to club_updates the same
 // way this writes to whats_new.
 //
-// Writes are admin-only in the database (0025's insert/update/delete policies
-// check is_active_coach() and is_admin()), so `isAdmin` here only decides
-// whether the controls render; it isn't what enforces the rule. A coach who
-// forced it true in the browser would have every write refused by RLS.
+// Writes need publish_whats_new in the database (0026's insert/update/delete
+// policies), so `canPublish` here only decides whether the controls render; it
+// isn't what enforces the rule. A coach who forced it true in the browser would
+// have every write refused by RLS.
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -124,12 +124,12 @@ function DraftFields({
 }
 
 export default function WhatsNewFeed({
-  isAdmin,
+  canPublish,
   currentUserId,
   initialItems,
   focusId,
 }: {
-  isAdmin: boolean;
+  canPublish: boolean;
   currentUserId: string | null;
   initialItems: WhatsNewItem[];
   /**
@@ -266,7 +266,7 @@ export default function WhatsNewFeed({
           Everything that&apos;s been posted for the club, newest first. Click an item to
           read it in full.
         </p>
-        {isAdmin && !adding && (
+        {canPublish && !adding && (
           <button
             onClick={() => {
               setError(null);
@@ -286,7 +286,7 @@ export default function WhatsNewFeed({
           </div>
         )}
 
-        {isAdmin && adding && (
+        {canPublish && adding && (
           <form onSubmit={handleAdd} className="space-y-3.5 border-b border-line px-5 py-4">
             <DraftFields draft={addDraft} setDraft={setAddDraft} idPrefix="add-item" />
             <div className="flex justify-end gap-2">
@@ -311,7 +311,7 @@ export default function WhatsNewFeed({
           <div className="px-5 py-12 text-center">
             <h3 className="mb-1 text-[15px] font-bold text-ink">Nothing posted yet</h3>
             <p className="text-[13px] text-slate-light">
-              {isAdmin
+              {canPublish
                 ? "Post the first item to let the club know what's happening."
                 : "Nothing has been posted yet."}
             </p>
@@ -392,7 +392,7 @@ export default function WhatsNewFeed({
                     <span className="text-[11.5px] text-slate-light">
                       {formatPublished(item.published_at)}
                     </span>
-                    {isAdmin && (
+                    {canPublish && (
                       <div className="flex gap-1.5">
                         <button
                           className={rowActionClass}

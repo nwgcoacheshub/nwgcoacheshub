@@ -168,9 +168,9 @@ export default function RotaBoard({
    */
   canManageCoaches?: boolean;
   /**
-   * Whether this user may write rota data — resolved server-side from their
-   * profile by getCanEditRota(), mirroring public.can_edit_rota() in migration
-   * 0013. Distinct from canManageCoaches, which is about *which board this is*
+   * Whether this user may write rota data at this site — resolved server-side
+   * as edit_rota at the site (hasSiteCapability, mirroring
+   * public.has_site_capability() in 0026). Distinct from canManageCoaches, which is about *which board this is*
    * rather than who's looking; the "Manage coaches" entry point needs both.
    *
    * Defaults to false so a caller that forgets to pass it gets the read-only

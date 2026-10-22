@@ -1,16 +1,17 @@
-import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCapabilities } from "@/lib/capabilities";
 import { createClient } from "@/lib/supabaseServer";
 import PoliciesLibrary, { type Policy } from "@/components/PoliciesLibrary";
 
 // Readable by every active coach, so unlike /admin/users there is no redirect
 // here — the (protected) layout already handles signed-out and deactivated
-// accounts. `role` only decides whether the write actions render, and it is
-// re-checked server-side by every route those actions call, so a coach who
-// forced isAdmin true in the browser would still be refused by the API.
+// accounts. manage_policies only decides whether the write actions render, and
+// it is re-checked server-side by every route those actions call, so a coach
+// who forced canManagePolicies true in the browser would still be refused by
+// the API.
 
 export default async function PoliciesPage() {
-  const { profile } = await getCurrentProfile();
-  const isAdmin = profile?.role === "admin";
+  const { caps } = await getCapabilities();
+  const canManagePolicies = caps.has("manage_policies");
 
   // RLS-gated select: policies_select_authenticated (0023) requires
   // is_active_coach(). file_path is deliberately not selected — the client has
@@ -32,7 +33,7 @@ export default async function PoliciesPage() {
         </div>
       </div>
 
-      <PoliciesLibrary initialPolicies={(policies ?? []) as Policy[]} isAdmin={isAdmin} />
+      <PoliciesLibrary initialPolicies={(policies ?? []) as Policy[]} canManagePolicies={canManagePolicies} />
     </main>
   );
 }

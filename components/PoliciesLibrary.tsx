@@ -1,6 +1,6 @@
 "use client";
 
-// The Policies Library list, filters, and admin actions.
+// The Policies Library list, filters, and manage_policies actions.
 //
 // One component file for the whole page's interactive surface, following
 // UsersTable — which likewise keeps its list and its three modals together
@@ -132,10 +132,10 @@ function DeleteIcon() {
 
 export default function PoliciesLibrary({
   initialPolicies,
-  isAdmin,
+  canManagePolicies,
 }: {
   initialPolicies: Policy[];
-  isAdmin: boolean;
+  canManagePolicies: boolean;
 }) {
   const [policies, setPolicies] = useState<Policy[]>(initialPolicies);
   const [search, setSearch] = useState("");
@@ -213,7 +213,7 @@ export default function PoliciesLibrary({
     if (!res.ok) {
       if (res.status === 409) {
         // The route's own message tells the caller to pass an explicit id,
-        // which is not something an admin can do from here. The equivalent
+        // which is not something anyone can do from here. The equivalent
         // action in the UI is Replace on the row they meant.
         return "More than one policy already uses that title. Rename this one, or close this and use Replace on the policy you meant to update.";
       }
@@ -252,7 +252,7 @@ export default function PoliciesLibrary({
           Current policy documents for all coaches. Search or filter by tag to find what
           you need.
         </p>
-        {isAdmin && (
+        {canManagePolicies && (
           <button
             onClick={() => setUploadOpen(true)}
             className={`${primaryButtonClass} shrink-0`}
@@ -312,7 +312,7 @@ export default function PoliciesLibrary({
             <p className="text-[13px] text-slate-light">
               {hasAny
                 ? "Try a different search, or pick another tag."
-                : isAdmin
+                : canManagePolicies
                   ? "Upload the first one to get started."
                   : "Nothing has been uploaded yet."}
             </p>
@@ -346,7 +346,7 @@ export default function PoliciesLibrary({
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5">
-                {isAdmin && (
+                {canManagePolicies && (
                   <button
                     onClick={() => setReplaceTarget(policy)}
                     className={iconButtonClass}
@@ -365,7 +365,7 @@ export default function PoliciesLibrary({
                 >
                   <DownloadIcon />
                 </button>
-                {isAdmin && (
+                {canManagePolicies && (
                   <button
                     onClick={() => setDeleteTarget(policy)}
                     className={dangerIconButtonClass}

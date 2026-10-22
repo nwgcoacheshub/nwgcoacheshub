@@ -1,8 +1,8 @@
 // POST /api/policies/upload — create or replace a policy document.
 //
-// Admin-only, re-checked server-side. The client's claimed role is never
-// consulted: requireActiveAdmin() reads the caller's own profiles row through
-// the RLS client and checks role and active itself.
+// manage_policies only, re-checked server-side. Nothing the client claims is
+// consulted: requireCapability() asks the database, as the caller, whether they
+// are active and hold the capability.
 //
 // Handles both cases in one route, because from the caller's point of view it's
 // one action ("put this document in the library") and the two differ only in
@@ -16,16 +16,16 @@
 // is the confirmed intent.
 
 import { NextResponse } from "next/server";
-import { requireActiveAdmin } from "@/lib/admin-guard";
+import { requireCapability } from "@/lib/admin-guard";
 import { createAdminClient } from "@/lib/supabaseAdmin";
 import { POLICIES_BUCKET } from "@/lib/policies/constants";
 import { newPolicyObjectPath, removePolicyObject } from "@/lib/policies/storage";
 import { validateUploadForm } from "@/lib/policies/validation";
 
 export async function POST(request: Request) {
-  // Before request.formData(), so an unauthenticated or non-admin caller never
-  // gets us to buffer their upload.
-  const guard = await requireActiveAdmin();
+  // Before request.formData(), so a caller without manage_policies never gets
+  // us to buffer their upload.
+  const guard = await requireCapability("manage_policies");
   if ("error" in guard) {
     return NextResponse.json({ error: guard.error }, { status: guard.status });
   }

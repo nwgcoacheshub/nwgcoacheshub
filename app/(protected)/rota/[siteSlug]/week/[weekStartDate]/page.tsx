@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabaseServer";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
-import { getCanEditRota } from "@/lib/rota/canEdit";
+import { getCapabilities, hasSiteCapability } from "@/lib/capabilities";
 import {
   currentMonday,
   formatWeekDate,
@@ -58,8 +58,8 @@ export default async function RotaWeekPage({
 
   const weekRange = weekRangeLabel(parsed);
   // Same split as the Standard Rota page: site visibility and write rights are
-  // separate questions, and getCurrentProfile() is cached per request.
-  const canEdit = await getCanEditRota();
+  // separate questions, and getCapabilities() is cached per request.
+  const canEdit = hasSiteCapability(await getCapabilities(), "edit_rota", site.id);
   const supabase = await createClient();
 
   const { data: weekly } = await supabase

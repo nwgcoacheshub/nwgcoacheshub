@@ -5,7 +5,7 @@
 // reach a document directly; the only way in is this route, and the only thing
 // standing between a caller and a file is the guard below.
 //
-// Open to any ACTIVE coach, not just admins — reading policy is the point of
+// Open to any ACTIVE coach, whatever their job title — reading policy is the point of
 // the library. That matches policies_select_authenticated (0023), which gates
 // select on is_active_coach() alone.
 //

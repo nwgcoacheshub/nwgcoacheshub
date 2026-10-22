@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCapabilities } from "@/lib/capabilities";
 
 export default async function AdminPage() {
-  const { profile } = await getCurrentProfile();
+  const { caps } = await getCapabilities();
 
-  if (!profile || profile.role !== "admin") {
+  // Users is the only thing here, so the page follows its capability.
+  if (!caps.has("manage_users")) {
     redirect("/");
   }
 

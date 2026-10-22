@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
   );
 
   // Refreshes the session cookie if needed. Route-level access control
-  // (redirects for unauthenticated/inactive/non-admin users) happens in
+  // (redirects for unauthenticated/inactive/unauthorised users) happens in
   // the (protected) layout and users page, not here.
   await supabase.auth.getUser();
 

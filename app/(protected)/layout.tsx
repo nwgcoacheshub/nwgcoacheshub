@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCapabilities } from "@/lib/capabilities";
 import { getSiteAccess } from "@/lib/rota/siteAccess";
 
 export default async function ProtectedLayout({
@@ -20,11 +21,12 @@ export default async function ProtectedLayout({
 
   // The Club Profile dropdown lists real sites from rota_sites rather than a
   // second hardcoded list, so it can't drift from the database. Scoped the same
-  // way the rota is: admins get every site, a coach gets only their own —
+  // way the rota is: view_all_sites holders get every site, a coach gets only their own —
   // linking a coach to six sites they'd be bounced straight back out of would
   // be worse than not offering them.
   const siteAccess = await getSiteAccess();
   const clubSites = siteAccess.ok ? siteAccess.sites : [];
+  const { caps } = await getCapabilities();
 
   // app-shell / app-main / app-footer are the hooks a page uses to opt into
   // filling the viewport instead of scrolling the window — see .fills-viewport
@@ -32,7 +34,7 @@ export default async function ProtectedLayout({
   return (
     <div className="app-shell flex min-h-full flex-col bg-background">
       <NavBar
-        isAdmin={profile.role === "admin"}
+        canManageUsers={caps.has("manage_users")}
         fullName={profile.full_name}
         clubSites={clubSites}
       />

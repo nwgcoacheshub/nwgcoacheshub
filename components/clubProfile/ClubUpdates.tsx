@@ -80,18 +80,18 @@ function DraftFields({
  * The club's updates feed. Pinned items first, then newest — the order comes
  * from the server query, so this component never re-sorts.
  *
- * Writes are admin-only in the database too (0009's insert/update/delete
- * policies check is_admin()), so `isAdmin` here only decides whether the
+ * Writes need manage_club_updates at this site in the database too (0026's
+ * insert/update/delete policies), so `canManage` here only decides whether the
  * controls render; it isn't what enforces the rule.
  */
 export default function ClubUpdates({
   siteId,
-  isAdmin,
+  canManage,
   currentUserId,
   initialUpdates,
 }: {
   siteId: string;
-  isAdmin: boolean;
+  canManage: boolean;
   currentUserId: string | null;
   initialUpdates: ClubUpdate[];
 }) {
@@ -185,7 +185,7 @@ export default function ClubUpdates({
           Club updates
         </h2>
         <span className="h-px flex-1 bg-line" />
-        {isAdmin && !adding && (
+        {canManage && !adding && (
           <button
             onClick={() => {
               setError(null);
@@ -205,7 +205,7 @@ export default function ClubUpdates({
           </div>
         )}
 
-        {isAdmin && adding && (
+        {canManage && adding && (
           <form onSubmit={handleAdd} className="space-y-3.5 border-b border-line px-5 py-4">
             <DraftFields draft={addDraft} setDraft={setAddDraft} idPrefix="add-update" />
             <div className="flex justify-end gap-2">
@@ -230,7 +230,7 @@ export default function ClubUpdates({
           <div className="px-5 py-8 text-center">
             <p className="text-sm font-semibold text-ink">No updates yet</p>
             <p className="mt-1.5 text-[13px] text-slate-light">
-              {isAdmin
+              {canManage
                 ? "Post one to let the club know what's happening."
                 : "Nothing has been posted for this club yet."}
             </p>
@@ -275,7 +275,7 @@ export default function ClubUpdates({
                     )}
                     <h3 className="text-[15px] font-bold text-ink">{update.title}</h3>
                   </div>
-                  {isAdmin && (
+                  {canManage && (
                     <div className="flex flex-wrap gap-1.5">
                       <button className={rowActionClass} onClick={() => startEdit(update)}>
                         Edit

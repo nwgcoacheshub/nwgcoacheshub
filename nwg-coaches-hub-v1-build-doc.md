@@ -5,7 +5,7 @@
 **Functional in v1** (real auth, real data, actually works):
 - Login (no public sign-up)
 - Dashboard/Home — auth-gated shell, greeting + role/site badges pulled from real data
-- Users page (admin only) — full add/edit/deactivate/reset-password, backed by Supabase
+- Users page (`manage_users` holders only) — full add/edit/deactivate/reset-password, backed by Supabase
 
 **Visual placeholder only in v1** (built and styled, but static — no real links, no database, no functionality):
 - Everything else on the Dashboard: search bar, "Report a concern" button, notifications bell, avatar, the "This week" hero (Weekly Focus + Pre-school theme), Programme content tiles, the "How do I…?" strip, What's New, My Compliance, Quick Links
@@ -27,11 +27,11 @@
 |---|---|---|
 | `/login` | Login | Public (only unauthenticated route) |
 | `/` | Dashboard/Home | Any authenticated user |
-| `/users` | Users | Admin only (redirect coaches away) |
+| `/users` | Users | `manage_users` only (redirect everyone else away) |
 
 ## 3. Navigation
 
-Top bar: **Home, Users** (admin only), **Rota** (placeholder link).
+Top bar: **Home, Users** (`manage_users` only), **Rota** (placeholder link).
 
 Two separate badges sit under the "Welcome back" heading:
 - Role badge (orange) — company job title, e.g. "Head of Gymnastics"
@@ -62,13 +62,13 @@ For reference when building the static markup — none of this queries real data
 | `id` | uuid | PK, FK → `auth.users.id` |
 | `email` | text | Synced from auth user |
 | `full_name` | text | |
-| `role` | text | Website permission: `'admin'` \| `'coach'` |
+| `role` | text | **Legacy, unused** (was `'admin'` \| `'coach'`). Dropped in P5 |
 | `job_title` | text | Company job title (fixed dropdown, see below) |
 | `site` | text | One of the 7 NWG sites, or `'Head Office'` for corporate/regional roles |
 | `active` | boolean | Default `true`. Drives soft-delete/deactivation |
 | `created_at` | timestamptz | Default `now()` |
 
-Your row will be pre-seeded in the migration as `role = 'admin'`.
+Your row was pre-seeded in 0001 as Head of Gymnastics (with the now-unused `role = 'admin'`).
 
 **`job_title` dropdown values:**
 - Coach
@@ -76,10 +76,9 @@ Your row will be pre-seeded in the migration as `role = 'admin'`.
 - Club Head Coach
 - Regional General Manager
 - Head of Gymnastics
-- Head of People
 - Head of Operations
 
-`job_title` is independent from `role` — e.g. a "Head of Operations" could still have website `role = 'coach'` (no Users-page access) unless explicitly given admin permissions.
+`job_title` drives permissions. Since migration 0026 the database maps each title to a set of capabilities (`title_has_capability()`); Regional General Manager, Head of Gymnastics and Head of Operations hold `manage_users`, which is what Users-page access needs. See CLAUDE.md → Permissions for the full matrix.
 
 ### Everything else on the Dashboard
 No tables needed for v1 — Weekly Focus, Programme tiles, How-do-I strip, What's New, and My Compliance are all hardcoded in the component code as static placeholder content. Quick Links is the one section with a known real destination eventually (external links) — everything else has no committed data source yet.
@@ -88,15 +87,16 @@ No tables needed for v1 — Weekly Focus, Programme tiles, How-do-I strip, What'
 
 ## 6. RLS Policies (`profiles`)
 
-- **SELECT:** a user can read their own row; admins can read all rows.
-- **UPDATE:** admins can update any row (`role`, `site`, `full_name`, `active`). Coaches cannot update any row, including their own.
+- **SELECT:** a user can read their own row; active `manage_users` holders can read all rows.
+- **UPDATE:** active `manage_users` holders can update any row (`full_name`, `job_title`, `site`, `active`). Nobody else can update any row, including their own.
+- **Self-edit trigger** (`profiles_guard_privileged_columns`, 0026): nobody may change their own `job_title`, `site` or `active`, even with `manage_users`.
 - **INSERT / DELETE:** blocked entirely at the client level — only ever done via the server-side function below, using the service-role key.
 
 ---
 
 ## 7. Auth Flow & Account Provisioning
 
-- Public sign-up disabled — the only way into the system is an admin-created account.
+- Public sign-up disabled — the only way into the system is an account created by a `manage_users` holder.
 - Login page: email + password only, no "forgot password" link.
 - **Deactivation approach:** an app-level gate — every protected page checks `profiles.active` on load and signs out/blocks access if `false`, rather than banning the underlying auth user directly.
 
@@ -107,10 +107,12 @@ No tables needed for v1 — Weekly Focus, Programme tiles, How-do-I strip, What'
 One small server-side endpoint (Vercel API route, service-role key as a server-only environment variable, never exposed to the browser).
 
 **Two actions:**
-1. **`createUser`** — takes name, email, role, job_title, site → creates the `auth.users` entry + inserts the matching `profiles` row.
-2. **`resetPassword`** — takes a user id → generates a new temporary password, returned once to the admin's screen to pass along manually.
+Both require the caller to be an active `manage_users` holder (`requireCapability`, which asks the database's `has_capability()`).
 
-Editing role/site/name and deactivating a user are normal RLS-protected updates to `profiles` — no service-role function needed for those.
+1. **`createUser`** — takes name, email, job_title, site (job_title checked against the 6 titles) → creates the `auth.users` entry + inserts the matching `profiles` row. No `role` is accepted or written.
+2. **`resetPassword`** — takes a user id → sets a new temporary password, passed along manually. Refuses the caller's own account and any account whose job title holds `manage_users` (active or not); those are reset in the Supabase dashboard.
+
+Editing job_title/site/name and deactivating a user are normal RLS-protected updates to `profiles` — no service-role function needed for those.
 
 ---
 
@@ -151,7 +153,7 @@ nwgcoacheshub/
 │  │  ├─ layout.tsx              # auth check + nav
 │  │  ├─ page.tsx                # Dashboard/Home
 │  │  └─ users/
-│  │     └─ page.tsx             # admin-only, redirects coaches
+│  │     └─ page.tsx             # manage_users only, redirects everyone else
 │  └─ api/
 │     └─ admin/
 │        ├─ create-user/route.ts

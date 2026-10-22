@@ -20,8 +20,8 @@ existing tools already handle that. Do not build gymnast/class CRUD features her
 
 ### Functional in v1
 - Login (Supabase Auth)
-- Users page (add / edit / deactivate / reset password — admin only), under Admin
-  (`/admin/users`)
+- Users page (add / edit / deactivate / reset password — `manage_users` holders only),
+  under Admin (`/admin/users`)
 
 ### Static placeholder only (NOT wired to real data or links yet)
 - Weekly Focus + Pre-school theme ("This week" hero)
@@ -61,9 +61,9 @@ at a time; closes on outside click or Escape:
   route `/operations/site-sops`)
 - **People** — HR Links, My Compliance (currently inert/disabled placeholders — no
   sub-route exists yet)
-- **Admin** — only rendered (trigger + contents) if the logged-in user's real
-  `profiles.role === 'admin'`; contains Users (`/admin/users` — add / edit / deactivate /
-  reset password)
+- **Admin** — only rendered (trigger + contents) if the logged-in user holds the
+  `manage_users` capability (see Permissions below); contains Users (`/admin/users` —
+  add / edit / deactivate / reset password)
 
 Each dropdown's parent landing page (`/club-profile`, `/gymnastics`, `/operations`,
 `/people`, `/admin`, `/settings`) still exists as a stub route for direct navigation —
@@ -124,8 +124,9 @@ title + subtitle) and rows (name + status pill, href="#"):
 **Footer:** small text "© 2026 The Gymnastics Blueprint. All rights reserved." (matches
 the login page's copyright line), log out link.
 
-Everything above except the greeting, the two badges, and Admin nav-item visibility is
-hardcoded placeholder content — no database tables, no fetching, just static markup.
+Everything above except the greeting, the two badges, and Admin nav-item visibility
+(`manage_users`) is hardcoded placeholder content — no database tables, no fetching,
+just static markup.
 
 ## Design tokens (exact values — use these, don't approximate)
 
@@ -185,15 +186,14 @@ new button or input rather than the larger originals.
 | `id` | uuid | PK, FK → `auth.users.id` |
 | `email` | text | Synced from auth user |
 | `full_name` | text | |
-| `role` | text | Website permission: `'admin'` \| `'coach'` — controls Users-page access |
+| `role` | text | **Legacy, unused.** Was `'admin'` \| `'coach'`. No app code or policy reads it; dropped in P5 |
 | `job_title` | text | Company job title — **fixed dropdown**, not free text (list below) |
 | `site` | text | One of the 7 NWG sites, or `'Head Office'` |
 | `active` | boolean | Default `true`. Drives soft-delete/deactivation on the Users page |
 | `created_at` | timestamptz | Default `now()` |
 
-`job_title` is independent from `role` — e.g. a "Head of Operations" could still have
-website `role = 'coach'` unless explicitly given admin permissions. `job_title` does not
-drive permissions or visibility; `role` alone controls that.
+`job_title` drives every permission, through the capability matrix described under
+Permissions below. Changing someone's job title is changing what they can do.
 
 **`job_title` dropdown values (fixed list):**
 - Coach
@@ -201,10 +201,45 @@ drive permissions or visibility; `role` alone controls that.
 - Club Head Coach
 - Regional General Manager
 - Head of Gymnastics
-- Head of People
 - Head of Operations
 
+### Permissions (job-title capabilities)
+Since migrations 0026 (database) and 0027 + P4 (app), permissions come from
+`profiles.job_title`. `profiles.role` is not read anywhere.
+
+| Capability | Held by |
+|---|---|
+| `view_all_sites`, `all_sites_scope`, `publish_whats_new`, `manage_policies`, `manage_users` | Regional General Manager, Head of Gymnastics, Head of Operations |
+| `edit_rota`, `manage_club_meetings`, `manage_club_updates` (site-scoped) | Lead Coach, Club Head Coach + the three above |
+| `manage_club_roles` (site-scoped) | Club Head Coach + the three above |
+
+Coach holds nothing. Every capability requires `active = true`. A site-scoped capability
+applies at the holder's own `profiles.site`, or at every site with `all_sites_scope`.
+
+- **The matrix lives only in the database**, in `title_has_capability()` (0026). Never
+  copy a job-title list into the app. Capability *names* appear in `lib/capabilities.ts`,
+  `title_has_capability()` and `my_capabilities()` (0027); a new capability goes in all three.
+- **UI** reads the caller's capabilities once per request through `getCapabilities()`
+  (`lib/capabilities.ts`, the `my_capabilities()` RPC) and uses `hasSiteCapability()` for
+  site-scoped ones. This only decides what is shown; RLS enforces every write.
+- **Secret-key routes** (`createAdminClient()`) bypass RLS, so each must start with
+  `requireCapability(cap)` from `lib/admin-guard.ts`, which asks the database's
+  `has_capability()` and requires an active account.
+- **Self-edit rule.** Nobody may change their own `job_title`, `site` or `active`; only an
+  active `manage_users` holder may change anyone else's. The
+  `profiles_guard_privileged_columns` trigger (0026) enforces this for client sessions,
+  and the Users page disables those controls on your own row.
+- **Any future SECURITY DEFINER function that updates `profiles` bypasses that trigger**
+  (it runs as its owner, which the trigger trusts, as it trusts `service_role`). Such a
+  function must enforce both self-edit rules itself.
+- **Password resets.** `/api/admin/reset-password` refuses the caller's own account and
+  any account whose job title holds `manage_users` (active or not). There is no
+  forgot-password flow: full-access accounts have their password reset in the Supabase
+  dashboard.
+- Migration 0027 must be applied before the P4 app code is deployed.
+
 ### Seed row (include in the initial migration)
+Historical: this is what 0001 inserted. The `role` value is legacy and no longer read.
 ```sql
 insert into profiles (email, full_name, role, job_title, site, active) values
 ('jamie@nilewilsongymnastics.com', 'Jamie Harrison', 'admin', 'Head of Gymnastics', 'Head Office', true);
@@ -227,8 +262,8 @@ Leave the structure as an array/list so more can be added without a rebuild.
 - Present a plan and wait for explicit approval before scaffolding new features or
   expanding scope beyond what's listed above.
 - Never build demo/preview toggles or switches into production code (e.g. a "view as
-  admin/coach" switcher) — anything role- or user-dependent must always read from the
-  real, logged-in user's `profiles` row. Toggles like this are fine in a static mockup
+  admin/coach" switcher) — anything permission- or user-dependent must always read from
+  the real, logged-in user's `profiles` row and capabilities. Toggles like this are fine in a static mockup
   for review purposes only, never in the actual app.
 - Squad naming convention (relevant to other NWG tools, not this one): gem/mineral
   names — Ruby, Sapphire, Emerald, Diamond, Amethyst, Quartz, Amber, Opal, Topaz, Onyx,

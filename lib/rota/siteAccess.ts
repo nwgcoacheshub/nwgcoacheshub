@@ -1,4 +1,5 @@
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getCapabilities } from "@/lib/capabilities";
 import { createClient } from "@/lib/supabaseServer";
 import { resolveSiteAccess, type SiteAccess, type SiteOption } from "./resolveSiteAccess";
 
@@ -13,6 +14,7 @@ export type { SiteAccess, SiteOption };
  */
 export async function getSiteAccess(): Promise<SiteAccess> {
   const { profile } = await getCurrentProfile();
+  const { caps } = await getCapabilities();
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -22,7 +24,7 @@ export async function getSiteAccess(): Promise<SiteAccess> {
     .order("sort_order");
 
   return resolveSiteAccess(
-    profile ? { role: profile.role, site: profile.site } : null,
+    profile ? { site: profile.site, viewAllSites: caps.has("view_all_sites") } : null,
     (data ?? []) as SiteOption[]
   );
 }
