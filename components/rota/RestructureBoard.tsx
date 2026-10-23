@@ -8,9 +8,9 @@ import RotaBoard, {
   type CatalogueItem,
   type Category,
   type ClassRow,
-  type Coach,
   type RosterRow,
 } from "./RotaBoard";
+import type { RosterCandidate, RotaPerson } from "@/lib/rota/people";
 import { useGenerateRestructure } from "./useGenerateRestructure";
 
 /**
@@ -33,10 +33,12 @@ export default function RestructureBoard({
   generatedAt,
   categories,
   catalogue,
-  initialCoaches,
+  people,
+  rosterCandidates,
   initialRoster,
   initialClasses,
   exportSpec,
+  canManageUsers,
   canEdit,
 }: {
   siteId: string;
@@ -46,10 +48,13 @@ export default function RestructureBoard({
   generatedAt: string;
   categories: Category[];
   catalogue: CatalogueItem[];
-  initialCoaches: Coach[];
+  people: RotaPerson[];
+  rosterCandidates: RosterCandidate[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
   exportSpec: RotaExportSpec;
+  /** manage_users, resolved server-side: makes "Admin › Users" a link. */
+  canManageUsers: boolean;
   /**
    * Resolved server-side as edit_rota at this site. Gates regeneration as well
    * as the board itself: upsert_restructure carries the same edit_rota check
@@ -84,13 +89,15 @@ export default function RestructureBoard({
         key={`${restructureId}:${generatedAt}`}
         dataSource={dataSource}
         scopeLabel={`${siteName}'s Restructure`}
-        siteId={siteId}
+        siteName={siteName}
         categories={categories}
         catalogue={catalogue}
-        initialCoaches={initialCoaches}
+        people={people}
+        rosterCandidates={rosterCandidates}
         initialRoster={initialRoster}
         initialClasses={initialClasses}
         exportSpec={exportSpec}
+        canManageUsers={canManageUsers}
         canEdit={canEdit}
         toolbarExtra={
           <button

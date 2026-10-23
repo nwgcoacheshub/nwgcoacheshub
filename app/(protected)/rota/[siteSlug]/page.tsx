@@ -10,9 +10,9 @@ import {
   type CatalogueItem,
   type Category,
   type ClassRow,
-  type Coach,
   type RosterRow,
 } from "@/components/rota/RotaBoard";
+import { toRosterCandidates, toRotaPeople } from "@/lib/rota/people";
 
 export default async function RotaSitePage({
   params,
@@ -37,11 +37,14 @@ export default async function RotaSitePage({
   // questions: view_all_sites decides the first, edit_rota at this site the
   // second (has_site_capability in 0026). getCapabilities() is cached per
   // request, so this reuses the call getSiteAccess() already made.
-  const canEdit = hasSiteCapability(await getCapabilities(), "edit_rota", site.id);
+  const capabilities = await getCapabilities();
+  const canEdit = hasSiteCapability(capabilities, "edit_rota", site.id);
+  // Only decides whether "Admin › Users" on the board is a link.
+  const canManageUsers = capabilities.caps.has("manage_users");
 
   const supabase = await createClient();
 
-  const [categoriesRes, catalogueRes, coachesRes, rosterRes, classesRes] =
+  const [categoriesRes, catalogueRes, peopleRes, candidatesRes, rosterRes, classesRes] =
     await Promise.all([
       supabase
         .from("rota_categories")
@@ -53,11 +56,14 @@ export default async function RotaSitePage({
         .select("id, title, category_key, default_meta, default_duration_mins")
         .eq("active", true)
         .order("sort_order"),
-      supabase
-        .from("rota_coaches")
-        .select("id, name, active")
-        .eq("site_id", site.id)
-        .order("name"),
+      // Coaches are profiles (0029), which coaches can't read beyond their own
+      // row, so names and status come through the definer RPCs. People: every
+      // profile this site's rows reference, for names and moved/deactivated
+      // flags. Roster: who can be added, fetched only for someone who can add.
+      supabase.rpc("site_rota_people", { p_site_id: site.id }),
+      canEdit
+        ? supabase.rpc("site_rota_roster", { p_site_id: site.id })
+        : Promise.resolve({ data: [] }),
       supabase
         .from("rota_standard_roster")
         .select(
@@ -108,9 +114,11 @@ export default async function RotaSitePage({
         siteName={site.name}
         categories={(categoriesRes.data ?? []) as Category[]}
         catalogue={(catalogueRes.data ?? []) as CatalogueItem[]}
-        initialCoaches={(coachesRes.data ?? []) as Coach[]}
+        people={toRotaPeople(peopleRes.data)}
+        rosterCandidates={toRosterCandidates(candidatesRes.data)}
         initialRoster={(rosterRes.data ?? []) as RosterRow[]}
         initialClasses={(classesRes.data ?? []) as ClassRow[]}
+        canManageUsers={canManageUsers}
         canEdit={canEdit}
         // `week: null` is what makes this the undated export: no date range in
         // the header, no dates on the day columns, and a file name that says

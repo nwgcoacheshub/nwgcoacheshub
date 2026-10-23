@@ -47,6 +47,12 @@ export type MeetingAttendee = {
  * A club_meeting_cycle_weeks row (0022). ZERO rows for a meeting means it runs
  * every week — the absence of a restriction is the restriction.
  */
+/**
+ * One tickable attendee in Manage meetings. `label` is already the display
+ * name, with " (moved)" / " (inactive)" for someone no longer assignable.
+ */
+export type AttendeeOption = { id: string; label: string };
+
 export type MeetingCycleWeek = {
   meeting_id: string;
   cycle_week_number: number;
@@ -130,12 +136,13 @@ export function buildMeetingViews({
   meetings,
   attendees,
   cycleWeeks,
-  coachNameById,
+  attendeeNameById,
 }: {
   meetings: ClubMeeting[];
   attendees: MeetingAttendee[];
   cycleWeeks: MeetingCycleWeek[];
-  coachNameById: Map<string, string>;
+  /** Display label per profile id, flag tag included. */
+  attendeeNameById: Map<string, string>;
 }): MeetingView[] {
   const attendeesByMeeting = new Map<string, string[]>();
   for (const attendee of attendees) {
@@ -163,7 +170,7 @@ export function buildMeetingViews({
       location: meeting.location,
       attendeeIds,
       attendeeNames: attendeeIds
-        .map((id) => coachNameById.get(id) ?? "Unknown")
+        .map((id) => attendeeNameById.get(id) ?? "Unknown")
         .sort((a, b) => a.localeCompare(b)),
       cycleWeekNumbers: (weeksByMeeting.get(meeting.id) ?? []).sort((a, b) => a - b),
     };

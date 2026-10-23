@@ -47,7 +47,8 @@
 // on a phone. See MAX_PAGE_W for where even that gives out.
 
 import { DAY_END, DAY_NAMES, DAY_START, laneAssign } from "./board";
-import type { ClassRow, Coach, RosterRow } from "@/components/rota/RotaBoard";
+import type { ClassRow, RosterRow } from "@/components/rota/RotaBoard";
+import type { CoachFlag, RotaDirectory } from "./people";
 
 /** Fixed. Extra height buys nothing: card type is capped by column width. */
 export const PAGE_H = 900;
@@ -355,9 +356,14 @@ export function planCard(
 /* ---------------- Whole-board planning ---------------- */
 
 export type PlannedCoach = {
-  rosterRow: RosterRow;
-  coachId: string;
+  /** React key: the roster row id, or "unassigned-{day}". */
+  key: string;
+  /** "unassigned" is the day's coach_id NULL column: no roster row behind it. */
+  kind: "coach" | "unassigned";
+  rosterRow: RosterRow | null;
+  coachId: string | null;
   name: string;
+  flag: CoachFlag;
   laneCount: number;
   width: number;
   /** class id -> lane index, from the board's own packing. */
@@ -402,14 +408,12 @@ export type ExportPlan = {
  * quiet Sunday doesn't get the same room as a full Saturday.
  */
 export function planExport(
-  coaches: Coach[],
+  directory: RotaDirectory,
   roster: RosterRow[],
   classes: ClassRow[],
   /** Ordered as the board orders them, so the legend reads the same every time. */
   categoryOrder: string[] = []
 ): ExportPlan {
-  const nameById = new Map(coaches.map((c) => [c.id, c.name]));
-
   // Same ordering as the board: alphabetical by coach name within each day.
   const rosterByDay: RosterRow[][] = [[], [], [], [], [], [], []];
   for (const row of roster) {
@@ -417,7 +421,7 @@ export function planExport(
   }
   for (const list of rosterByDay) {
     list.sort((a, b) =>
-      (nameById.get(a.coach_id) ?? "").localeCompare(nameById.get(b.coach_id) ?? "", undefined, {
+      directory.name(a.coach_id).localeCompare(directory.name(b.coach_id), undefined, {
         sensitivity: "base",
       })
     );
@@ -456,10 +460,23 @@ export function planExport(
       return { row, laneCount, lanes, classes: own, offShift };
     });
 
+    // Unassigned (coach_id NULL) classes get their own column after the
+    // coaches, as on the board. Nobody's shift, so nothing is shaded.
+    const unassignedClasses = classes.filter(
+      (c) => c.day_of_week === dayIndex && c.coach_id === null
+    );
+    for (const c of unassignedClasses) {
+      if (!usedCategoryKeys.includes(c.category_key)) usedCategoryKeys.push(c.category_key);
+    }
+    const unassigned = unassignedClasses.length
+      ? { classes: unassignedClasses, ...laneAssign(unassignedClasses) }
+      : null;
+
     // A day with nobody rostered still gets one lane's width so its header and
     // "nobody rostered" note have somewhere to sit — same as the board.
-    const lanes = coachesForDay.reduce((n, c) => n + c.laneCount, 0) || 1;
-    return { dayIndex, coachesForDay, lanes };
+    const lanes =
+      coachesForDay.reduce((n, c) => n + c.laneCount, 0) + (unassigned?.laneCount ?? 0) || 1;
+    return { dayIndex, coachesForDay, unassigned, lanes };
   });
 
   const totalLanes = draft.reduce((n, d) => n + d.lanes, 0);
@@ -469,16 +486,40 @@ export function planExport(
   const days: PlannedDay[] = draft.map((d) => ({
     dayIndex: d.dayIndex,
     width: d.lanes * laneW,
-    coaches: d.coachesForDay.map((c) => ({
-      rosterRow: c.row,
-      coachId: c.row.coach_id,
-      name: nameById.get(c.row.coach_id) ?? "Unknown coach",
-      laneCount: c.laneCount,
-      width: c.laneCount * laneW,
-      lanes: c.lanes,
-      classes: c.classes,
-      offShift: c.offShift,
-    })),
+    coaches: [
+      ...d.coachesForDay.map(
+        (c): PlannedCoach => ({
+          key: c.row.id,
+          kind: "coach",
+          rosterRow: c.row,
+          coachId: c.row.coach_id,
+          name: directory.name(c.row.coach_id),
+          flag: directory.flag(c.row.coach_id),
+          laneCount: c.laneCount,
+          width: c.laneCount * laneW,
+          lanes: c.lanes,
+          classes: c.classes,
+          offShift: c.offShift,
+        })
+      ),
+      ...(d.unassigned
+        ? [
+            {
+              key: "unassigned-" + d.dayIndex,
+              kind: "unassigned",
+              rosterRow: null,
+              coachId: null,
+              name: "Unassigned",
+              flag: null,
+              laneCount: d.unassigned.laneCount,
+              width: d.unassigned.laneCount * laneW,
+              lanes: d.unassigned.lanes,
+              classes: d.unassigned.classes,
+              offShift: [],
+            } satisfies PlannedCoach,
+          ]
+        : []),
+    ],
   }));
 
   // Legend order follows rota_categories.sort_order rather than whichever class

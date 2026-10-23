@@ -179,7 +179,9 @@ new button or input rather than the larger originals.
   committed, never pasted into chat) and must NOT use a `NEXT_PUBLIC_` prefix, since it
   bypasses Row Level Security and must never reach the browser.
 - These belong in `.env.local` (git-ignored) — never hardcode or commit them
-- Only live table in v1: `profiles`
+- `profiles` (below) is the account table. It is no longer the only live table: the rota
+  (0002 onward, see "Rota data model"), Club Profile, programme, policies and What's New
+  tables, among others, are defined in `supabase/migrations/`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -241,6 +243,34 @@ applies at the holder's own `profiles.site`, or at every site with `all_sites_sc
   objects created in `public` by `postgres` no longer default to anon either. A new
   function still needs `revoke execute ... from public` and `from anon`, then an explicit
   grant to `authenticated`.
+
+### Rota data model
+Since migration 0029 (applied), rota coaches **are profiles**. `rota_coaches` was dropped,
+and there is no rota-specific coach list or coach-management UI. A new coach is an account,
+created in Admin › Users.
+
+- **Coach columns.** The 10 coach FKs (`coach_id` on the 3 roster and 3 class tables
+  (standard, weekly, restructure), `set_coach_id` on the 3 class tables, and
+  `club_meeting_attendees.coach_id`) reference `profiles(id)` ON DELETE RESTRICT. Deactivate
+  people; don't delete them.
+- **Unassigned.** Class `coach_id` is nullable: **NULL means unassigned**, and the board shows
+  those classes in an "Unassigned" column at the end of the day. Roster `coach_id` stays NOT
+  NULL. `coach_id` is the column a class sits in; `set_coach_id` is whose group it really is
+  (NULL = the same coach, i.e. not a cover). Removing a coach from a day unassigns their classes
+  rather than deleting them. Filter NULL with `.is(col, null)`, never `.eq(col, null)`.
+- **Where coaches come from.** Coaches can read only their own `profiles` row, so the app uses
+  two definer RPCs, each called once per page load:
+  - `site_rota_roster(p_site_id)` → `id, full_name, job_title`: the **assignable** list, i.e.
+    active profiles at that site titled Coach, Lead Coach or Club Head Coach. It feeds the
+    add-coach picker, the class modal's Set coach list and the meeting attendee picker.
+  - `site_rota_people(p_site_id)` → `id, full_name, active, site`: **names and status** for
+    every profile that site's roster, class and meeting attendee rows reference, whatever their
+    current `active` or `site`. A rota coach whose profile is inactive, or whose `site` isn't
+    the rota's site, is flagged on the board and in the PDF.
+  - Both return an empty set to anyone who can't read that site's rota.
+- **App side.** `lib/rota/people.ts` turns both into one lookup (`makeDirectory`). Display names
+  are first name + last initial ("Beth H"), or the full name where two people would share one.
+  `resolve_profile_names()` is not used for rota or attendee names.
 
 ### Seed row (include in the initial migration)
 Historical: this is what 0001 inserted. `role` was dropped in 0028, so it no longer runs as

@@ -7,11 +7,11 @@
 // names. That failure is invisible when you're testing as a full-access user,
 // which is exactly why every caller must come through here.
 //
-// Applies to the three profiles foreign keys: club_updates.created_by,
-// club_role_assignments.coach_id and hero_hours.logged_by_coach_id. It does NOT
-// apply to rota_weekly_roster.coach_id or rota_standard_roster.coach_id — those
-// point at rota_coaches, which is site-readable by any coach, so those names
-// come straight off the row.
+// Applies to club_updates.created_by, club_role_assignments.coach_id and
+// hero_hours.logged_by_coach_id. Rota roster/class coach ids and
+// club_meeting_attendees.coach_id also point at profiles (0029), but they get
+// their names and moved/deactivated status from site_rota_people() instead
+// (lib/rota/people.ts), which is keyed on the site rather than an id list.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 

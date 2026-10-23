@@ -6,9 +6,8 @@
 // than teach the board about both, it takes one of these and calls it; the
 // board never names a table.
 //
-// Coaches are deliberately not in here: rota_coaches is site-scoped in both
-// modes (a week's roster still points at the site's coaches), so adding one
-// isn't a scoped write and stays on the board with its site_id.
+// Coaches are not in here: they are profiles (0029), managed in Admin › Users,
+// and the board only ever references them by id.
 //
 // Every method returns the same { error } shape the board's optimistic
 // `commit` helper expects, so a failed write rolls the board back either way.
@@ -38,7 +37,8 @@ export type RosterPatch = {
 export type ClassInsert = {
   id: string;
   day_of_week: number;
-  coach_id: string;
+  /** NULL = unassigned (0029): the class sits in the day's Unassigned column. */
+  coach_id: string | null;
   set_coach_id: string | null;
   class_catalogue_id: string | null;
   title: string;
@@ -70,14 +70,18 @@ export interface RotaDataSource {
   insertClass(row: ClassInsert): Promise<WriteResult>;
   updateClass(classId: string, patch: ClassPatch): Promise<WriteResult>;
   deleteClass(classId: string): Promise<WriteResult>;
-  /** Used when a coach's column is removed from a day. */
-  deleteClassesForCoachDay(day: number, coachId: string): Promise<WriteResult>;
+  /**
+   * Used when a coach's column is removed from a day: their classes that day
+   * move to Unassigned instead of being deleted, keeping whose group each one
+   * really is in set_coach_id.
+   */
+  unassignClassesForCoachDay(day: number, coachId: string): Promise<WriteResult>;
 }
 
 /**
  * `scope` is the column pair that ties rows to this board —
  * { site_id } for the standard rota, { weekly_rota_id } for a week. It's
- * merged into every insert and used to bound the bulk delete, so rows can
+ * merged into every insert and used to bound the bulk unassign, so rows can
  * never be written into the wrong scope.
  */
 function makeDataSource(
@@ -141,10 +145,28 @@ function makeDataSource(
       return { error };
     },
 
-    async deleteClassesForCoachDay(day, coachId) {
+    // Two updates, in this order. (a) records the real owner on classes that
+    // have none, since a "no cover" class stores set_coach_id as NULL and
+    // would otherwise lose its owner once coach_id goes. `.is`, because
+    // `.eq(col, null)` is `col = NULL` and never matches. (b) then clears
+    // coach_id. Run the other way round, (a) would match nothing.
+    //
+    // Not atomic. If (b) fails after (a), those rows have set_coach_id equal to
+    // coach_id, which still reads as "not cover", and the board rolls back.
+    async unassignClassesForCoachDay(day, coachId) {
+      const updatedAt = new Date().toISOString();
+      const { error: fillError } = await supabase
+        .from(classTable)
+        .update({ set_coach_id: coachId, updated_at: updatedAt })
+        .match(scope)
+        .eq("day_of_week", day)
+        .eq("coach_id", coachId)
+        .is("set_coach_id", null);
+      if (fillError) return { error: fillError };
+
       const { error } = await supabase
         .from(classTable)
-        .delete()
+        .update({ coach_id: null, updated_at: updatedAt })
         .match(scope)
         .eq("day_of_week", day)
         .eq("coach_id", coachId);

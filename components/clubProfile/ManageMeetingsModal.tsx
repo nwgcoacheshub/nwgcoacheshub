@@ -7,9 +7,9 @@ import { meetingWhenLabel, weekPatternLabel } from "@/lib/clubProfile/format";
 import {
   CYCLE_WEEK_NUMBERS,
   MEETING_CATEGORIES,
+  type AttendeeOption,
   type MeetingCategoryGroup,
 } from "@/lib/clubProfile/meetings";
-import type { RosterCoach } from "@/lib/clubProfile/attendance";
 import Modal from "@/components/Modal";
 import {
   inputClass,
@@ -77,7 +77,7 @@ function DraftFields({
 }: {
   draft: Draft;
   setDraft: (d: Draft) => void;
-  coaches: RosterCoach[];
+  coaches: AttendeeOption[];
 }) {
   return (
     <>
@@ -158,7 +158,7 @@ function DraftFields({
         <label className={labelClass}>Attendees</label>
         {coaches.length === 0 ? (
           <p className="text-[13px] text-slate-light">
-            No coaches on this club&apos;s roster yet.
+            No coaches with an active account at this club yet.
           </p>
         ) : (
           <div className="max-h-36 overflow-y-auto rounded-lg border border-line px-2.5 py-1.5">
@@ -175,7 +175,7 @@ function DraftFields({
                   }
                   className="h-3.5 w-3.5 accent-orange"
                 />
-                {coach.name}
+                {coach.label}
               </label>
             ))}
           </div>
@@ -219,18 +219,23 @@ function DraftFields({
  * only fetches active=true (matching HeroesModal, which has no reactivate path
  * either) — deactivating one simply drops it from this list on refresh.
  *
- * The attendee picker lists every rota_coaches row for the site with no active
- * filter, matching the roster convention used elsewhere on this page.
+ * The attendee picker lists site_rota_roster (active coaching accounts at this
+ * site). When editing, it also lists that meeting's current attendees who
+ * aren't on it — moved site, deactivated, or not a coaching title — ticked and
+ * tagged. Attendees are saved wholesale (delete, then insert the ticked ids),
+ * so without them any edit would silently drop those people.
  */
 export default function ManageMeetingsModal({
   siteId,
   categoryGroups,
-  coaches,
+  attendeeOptions,
+  attendeeLabels,
   onClose,
 }: {
   siteId: string;
   categoryGroups: MeetingCategoryGroup[];
-  coaches: RosterCoach[];
+  attendeeOptions: AttendeeOption[];
+  attendeeLabels: Record<string, string>;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -250,6 +255,16 @@ export default function ManageMeetingsModal({
       cycleWeekNumbers: m.cycleWeekNumbers,
     }))
   );
+
+  // The picker's list for one meeting: the assignable coaches, then any of its
+  // saved attendees who aren't among them. Built from the saved list rather
+  // than the draft, so unticking one doesn't make their checkbox vanish.
+  function optionsForMeeting(meeting: MeetingRow): AttendeeOption[] {
+    const extras = meeting.attendeeIds
+      .filter((id) => !attendeeOptions.some((o) => o.id === id))
+      .map((id) => ({ id, label: attendeeLabels[id] ?? "Unknown" }));
+    return [...attendeeOptions, ...extras];
+  }
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -430,7 +445,7 @@ export default function ManageMeetingsModal({
 
       {adding && (
         <form onSubmit={handleAdd} className="mb-4 space-y-3.5 rounded-lg border border-line px-4 py-4">
-          <DraftFields draft={addDraft} setDraft={setAddDraft} coaches={coaches} />
+          <DraftFields draft={addDraft} setDraft={setAddDraft} coaches={attendeeOptions} />
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -457,7 +472,11 @@ export default function ManageMeetingsModal({
             <div key={meeting.id} className="border-b border-line px-4 py-3 last:border-b-0">
               {editingId === meeting.id ? (
                 <div className="space-y-3.5">
-                  <DraftFields draft={editDraft} setDraft={setEditDraft} coaches={coaches} />
+                  <DraftFields
+                    draft={editDraft}
+                    setDraft={setEditDraft}
+                    coaches={optionsForMeeting(meeting)}
+                  />
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"

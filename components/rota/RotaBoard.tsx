@@ -1,9 +1,10 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabaseClient";
+import Link from "next/link";
 import styles from "./rota-board.module.css";
 import {
+  COACH_HEAD_FLAGGED_H,
   COACH_HEAD_H,
   COL_W,
   DAY_HEAD_H,
@@ -29,11 +30,16 @@ import {
   type CoachStatus,
 } from "@/lib/rota/board";
 import type { RotaDataSource } from "@/lib/rota/rotaDataSource";
-import ManageCoachesModal from "./ManageCoachesModal";
+import {
+  flagTag,
+  makeDirectory,
+  type CoachFlag,
+  type RosterCandidate,
+  type RotaPerson,
+} from "@/lib/rota/people";
 import RotaExportButton, { type RotaExportSpec } from "./RotaExportButton";
 
 export type Category = { key: string; label: string; color_hex: string };
-export type Coach = { id: string; name: string; active: boolean };
 
 export type CatalogueItem = {
   id: string;
@@ -59,7 +65,8 @@ export type RosterRow = {
 export type ClassRow = {
   id: string;
   day_of_week: number;
-  coach_id: string;
+  /** NULL = unassigned: shown in the day's Unassigned column (0029). */
+  coach_id: string | null;
   set_coach_id: string | null;
   class_catalogue_id: string | null;
   title: string;
@@ -70,7 +77,6 @@ export type ClassRow = {
 };
 
 type BoardData = {
-  coaches: Coach[];
   roster: RosterRow[];
   classes: ClassRow[];
 };
@@ -91,7 +97,9 @@ type ModalState = {
   title: string;
   categoryKey: string;
   day: number;
+  // UNASSIGNED ("") = the Unassigned column.
   coachId: string;
+  // NO_SET_COACH ("") = None.
   setCoachId: string;
   startMins: number;
   durationMins: number;
@@ -108,11 +116,19 @@ const CUSTOM_CLASS = "__custom__";
 /** Sentinel for the duration picker's "Custom…" escape hatch. */
 const CUSTOM_DURATION = "__custom_duration__";
 
-/** Returned by the coach-directory writes when canEdit is false. */
-const NO_EDIT_RIGHTS = "Your job title doesn't have rota edit rights.";
-
 /** Tooltip on the write controls that stay visible but disabled. */
-const NO_EDIT_TITLE = NO_EDIT_RIGHTS;
+const NO_EDIT_TITLE = "Your job title doesn't have rota edit rights.";
+
+/** Coach column value for "Unassigned" in the class modal (coach_id NULL). */
+const UNASSIGNED = "";
+
+/** Set coach value for "None" in the class modal (set_coach_id NULL). */
+const NO_SET_COACH = "";
+
+/** COVER badge: someone other than the set coach is delivering it. */
+function isCover(ev: ClassRow) {
+  return !!ev.coach_id && !!ev.set_coach_id && ev.set_coach_id !== ev.coach_id;
+}
 
 const TIME_LABELS: number[] = [];
 for (let m = DAY_START; m <= DAY_START + SLOTS * SLOT_MIN; m += 60) {
@@ -122,32 +138,41 @@ for (let m = DAY_START; m <= DAY_START + SLOTS * SLOT_MIN; m += 60) {
 const START_OPTIONS = startOptions();
 
 /**
- * The rota grid. Identical for the Standard Rota and for a generated week —
- * the only difference is the `dataSource` it writes through, so nothing in here
- * names a table. `siteId` is still needed directly because rota_coaches is
- * site-scoped in both modes.
+ * The rota grid. Identical for the Standard Rota, a generated week and the
+ * Restructure — the only difference is the `dataSource` it writes through, so
+ * nothing in here names a table.
+ *
+ * Coaches are profiles (0029). `people` (site_rota_people) names everyone the
+ * rows reference and says whether they've moved site or been deactivated;
+ * `rosterCandidates` (site_rota_roster) is who may be added. Nobody is created
+ * here: new coaches are accounts, made in Admin › Users.
  */
 export default function RotaBoard({
   dataSource,
   scopeLabel,
-  siteId,
+  siteName,
   categories,
   catalogue,
-  initialCoaches,
+  people,
+  rosterCandidates,
   initialRoster,
   initialClasses,
   toolbarExtra,
   exportSpec,
-  canManageCoaches = false,
+  canManageUsers = false,
   canEdit = false,
 }: {
   dataSource: RotaDataSource;
   /** What this board is showing, for the empty note — a site or a week. */
   scopeLabel: string;
-  siteId: string;
+  /** rota_sites.name — what a coach's profiles.site is compared with. */
+  siteName: string;
   categories: Category[];
   catalogue: CatalogueItem[];
-  initialCoaches: Coach[];
+  /** site_rota_people: names and status for every id on the board. */
+  people: RotaPerson[];
+  /** site_rota_roster: the assignable coaches. Empty unless canEdit. */
+  rosterCandidates: RosterCandidate[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
   /** Extra toolbar control, e.g. the week board's regenerate action. */
@@ -161,17 +186,15 @@ export default function RotaBoard({
    */
   exportSpec?: RotaExportSpec;
   /**
-   * Shows the "Manage coaches" entry point. Only true on the Standard Rota:
-   * its deactivate-confirmation step checks which days a coach appears on in
-   * `roster`, which is only the site's Standard Rota when this board is bound
-   * to the standard data source.
+   * The real session holds manage_users, so "Admin › Users" in the description
+   * is a link. Everyone else gets the same sentence as plain text, because
+   * /admin/users would only redirect them home.
    */
-  canManageCoaches?: boolean;
+  canManageUsers?: boolean;
   /**
    * Whether this user may write rota data at this site — resolved server-side
    * as edit_rota at the site (hasSiteCapability, mirroring
-   * public.has_site_capability() in 0026). Distinct from canManageCoaches, which is about *which board this is*
-   * rather than who's looking; the "Manage coaches" entry point needs both.
+   * public.has_site_capability() in 0026).
    *
    * Defaults to false so a caller that forgets to pass it gets the read-only
    * board rather than controls that fail at the database.
@@ -185,10 +208,7 @@ export default function RotaBoard({
    */
   canEdit?: boolean;
 }) {
-  const supabase = useMemo(() => createClient(), []);
-
   const [data, setData] = useState<BoardData>({
-    coaches: initialCoaches,
     roster: initialRoster,
     classes: initialClasses,
   });
@@ -203,14 +223,13 @@ export default function RotaBoard({
   const [error, setError] = useState<string | null>(null);
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const [coachPicker, setCoachPicker] = useState<CoachPickerState | null>(null);
-  const [newCoachName, setNewCoachName] = useState("");
-  const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
   const [modal, setModal] = useState<ModalState | null>(null);
   const grabOffsetY = useRef(0);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const catalogueSelectRef = useRef<HTMLSelectElement | null>(null);
 
-  const { coaches, roster, classes } = data;
+  const { roster, classes } = data;
 
   /**
    * Optimistic write: paint `next` immediately, then persist. If the write
@@ -236,37 +255,12 @@ export default function RotaBoard({
     }
   }
 
-  const coachById = useMemo(() => {
-    const map = new Map<string, Coach>();
-    for (const c of coaches) map.set(c.id, c);
-    return map;
-  }, [coaches]);
-
-  // Deactivated coaches stay in `coaches` (and coachById above) so their name
-  // still resolves wherever their historical roster/class rows are shown —
-  // they just drop out of both add-coach pickers.
-  // Sorted alphabetically (case-insensitive) rather than insertion order, so
-  // newly added coaches slot into place immediately without a refresh.
-  const activeCoaches = useMemo(
-    () =>
-      coaches
-        .filter((c) => c.active)
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
-    [coaches]
+  // The one lookup for every coach id: display names, set-coach labels and
+  // flags. Fixed for the board's lifetime — the page refetches on navigation.
+  const directory = useMemo(
+    () => makeDirectory(people, rosterCandidates, siteName),
+    [people, rosterCandidates, siteName]
   );
-
-  // Which days (0=Mon..6=Sun) each coach appears on in `roster`. Only
-  // meaningful as "the Standard Rota" when canManageCoaches is true — see the
-  // prop doc above.
-  const standardDaysByCoach = useMemo(() => {
-    const map = new Map<string, number[]>();
-    for (const r of roster) {
-      const list = map.get(r.coach_id) ?? [];
-      list.push(r.day_of_week);
-      map.set(r.coach_id, list);
-    }
-    return map;
-  }, [roster]);
 
   const categoryByKey = useMemo(() => {
     const map = new Map<string, Category>();
@@ -275,8 +269,7 @@ export default function RotaBoard({
   }, [categories]);
 
   function coachName(id: string | null) {
-    if (!id) return "";
-    return coachById.get(id)?.name ?? "Unknown coach";
+    return directory.name(id);
   }
 
   const rosterByDay = useMemo(() => {
@@ -286,25 +279,46 @@ export default function RotaBoard({
     }
     for (const list of byDay) {
       list.sort((a, b) =>
-        (coachById.get(a.coach_id)?.name ?? "").localeCompare(
-          coachById.get(b.coach_id)?.name ?? "",
-          undefined,
-          { sensitivity: "base" }
-        )
+        directory
+          .name(a.coach_id)
+          .localeCompare(directory.name(b.coach_id), undefined, { sensitivity: "base" })
       );
     }
     return byDay;
-  }, [roster, coachById]);
+  }, [roster, directory]);
+
+  // Roster rows whose coach has moved site or been deactivated, grouped per
+  // person for the banner (one line each, with their days).
+  const flaggedPeople = useMemo(() => {
+    const byCoach = new Map<string, { coachId: string; flag: CoachFlag; days: number[] }>();
+    for (const row of roster) {
+      const flag = directory.flag(row.coach_id);
+      if (!flag) continue;
+      const entry = byCoach.get(row.coach_id) ?? { coachId: row.coach_id, flag, days: [] };
+      entry.days.push(row.day_of_week);
+      byCoach.set(row.coach_id, entry);
+    }
+    return [...byCoach.values()]
+      .map((e) => ({ ...e, days: e.days.sort((a, b) => a - b) }))
+      .sort((a, b) => directory.name(a.coachId).localeCompare(directory.name(b.coachId)));
+  }, [roster, directory]);
+
+  const coachHeadH = flaggedPeople.length > 0 ? COACH_HEAD_FLAGGED_H : COACH_HEAD_H;
 
   /**
    * Column planning, same shape as the mock: a time column, then one column
    * per coach per day (widened into extra lanes when their classes overlap),
-   * with a divider between days.
+   * then an Unassigned column on any day with a coach_id NULL class, with a
+   * divider between days.
    */
   const layout = useMemo(() => {
     const cols: number[] = [TIME_COL_W];
     const coachCols = new Map<string, { startCol: number; laneCount: number }>();
     const lanesByCoach = new Map<string, Map<string, number>>();
+    const unassignedCols = new Map<
+      number,
+      { startCol: number; laneCount: number; lanes: Map<string, number>; classes: ClassRow[] }
+    >();
     const dayCols: { startCol: number; spanCols: number; isEmpty: boolean }[] = [];
     let cursor = 2; // grid columns are 1-indexed; col 1 is the time column
 
@@ -324,9 +338,17 @@ export default function RotaBoard({
         cursor += laneCount;
       }
 
-      // A day with nobody rostered still needs one column's width so its
+      const unassigned = classes.filter((c) => c.day_of_week === d && c.coach_id === null);
+      if (unassigned.length > 0) {
+        const { lanes, laneCount } = laneAssign(unassigned);
+        unassignedCols.set(d, { startCol: cursor, laneCount, lanes, classes: unassigned });
+        for (let i = 0; i < laneCount; i++) cols.push(COL_W);
+        cursor += laneCount;
+      }
+
+      // A day with nothing on it still needs one column's width so its
       // header (and "+ coach" button) stays reachable on an empty board.
-      const isEmpty = dayRoster.length === 0;
+      const isEmpty = dayRoster.length === 0 && unassigned.length === 0;
       if (isEmpty) {
         cols.push(COL_W);
         cursor += 1;
@@ -340,7 +362,7 @@ export default function RotaBoard({
       }
     }
 
-    return { cols, coachCols, lanesByCoach, dayCols };
+    return { cols, coachCols, lanesByCoach, unassignedCols, dayCols };
   }, [rosterByDay, classes]);
 
   // Close the coach popover on any outside click, as the mock did. The
@@ -367,7 +389,12 @@ export default function RotaBoard({
 
   /* ---------------- Mutations ---------------- */
 
-  function moveClass(classId: string, day: number, coachId: string, startMins: number) {
+  function moveClass(
+    classId: string,
+    day: number,
+    coachId: string | null,
+    startMins: number
+  ) {
     const current = dataRef.current;
     const target = current.classes.find((c) => c.id === classId);
     if (!target) return;
@@ -387,10 +414,15 @@ export default function RotaBoard({
     // pointing at that same original owner rather than the coach it's
     // currently sitting with. Moving within the same coach's column (a pure
     // time/day change) leaves set_coach_id exactly as it was.
+    //
+    // Unassigned (coach_id NULL) follows the same rule going in: dropping a
+    // class there keeps its real owner in set_coach_id. Coming out of it,
+    // set_coach_id is left exactly as it was.
     const coachChanged = target.coach_id !== coachId;
-    const setCoachId = coachChanged
-      ? (target.set_coach_id ?? target.coach_id)
-      : target.set_coach_id;
+    const setCoachId =
+      coachChanged && target.coach_id !== null
+        ? (target.set_coach_id ?? target.coach_id)
+        : target.set_coach_id;
 
     const next = {
       ...current,
@@ -513,12 +545,13 @@ export default function RotaBoard({
   function openCoachPicker(day: number, e: React.MouseEvent) {
     e.stopPropagation();
     setPopover(null);
-    setNewCoachName("");
+    setPickerQuery("");
     const rect = e.currentTarget.getBoundingClientRect();
     setCoachPicker({
       day,
       top: rect.bottom + 6,
-      left: Math.min(rect.left, window.innerWidth - 232),
+      // The picker is 280px wide (.coach-picker); keep it on screen.
+      left: Math.min(rect.left, window.innerWidth - 300),
     });
   }
 
@@ -541,7 +574,7 @@ export default function RotaBoard({
     };
   }
 
-  /** Adds a coach already in the site's directory to a day's roster. */
+  /** The picker's Add action: puts a roster candidate on a day. */
   function addExistingCoachToDay(day: number, coachId: string) {
     const current = dataRef.current;
     if (current.roster.some((r) => r.day_of_week === day && r.coach_id === coachId)) {
@@ -565,117 +598,6 @@ export default function RotaBoard({
     );
   }
 
-  /** The picker's inline escape hatch: create a brand-new coach and add them in one step. */
-  async function createCoachAndAddToDay(day: number, rawName: string) {
-    if (!canEdit) return;
-    const name = rawName.trim();
-    if (!name) return;
-
-    const current = dataRef.current;
-    const coach: Coach = { id: crypto.randomUUID(), name, active: true };
-    const newRow = nextRosterRow(day, coach.id);
-
-    const next: BoardData = {
-      ...current,
-      coaches: [...current.coaches, coach],
-      roster: [...current.roster, newRow],
-    };
-
-    setCoachPicker(null);
-    setNewCoachName("");
-    await commit(next, async () => {
-      // rota_coaches is shared by the standard rota and every week, so it's
-      // keyed on the site in both modes rather than going via the data source.
-      const { error: coachError } = await supabase
-        .from("rota_coaches")
-        .insert({ id: coach.id, site_id: siteId, name: coach.name });
-      if (coachError) return { error: coachError };
-      return dataSource.insertRoster({
-        id: newRow.id,
-        day_of_week: day,
-        coach_id: coach.id,
-        sort_order: newRow.sort_order,
-        shift_start_mins: newRow.shift_start_mins,
-        shift_end_mins: newRow.shift_end_mins,
-      });
-    });
-  }
-
-  /**
-   * Coach directory CRUD for the "Manage coaches" view. These write straight
-   * to rota_coaches rather than through `commit` — unlike roster/class edits
-   * they aren't scoped to this board's data source (rota_coaches is
-   * site-scoped in both standard and weekly mode), so each rolls its own
-   * `coaches` state back on failure and reports its error to the caller
-   * instead of the board-level error banner.
-   *
-   * These three don't go through `commit`, so they carry their own canEdit
-   * guard. They return the refusal rather than swallowing it, because the
-   * modal they're called from surfaces whatever comes back.
-   */
-  async function addCoach(name: string): Promise<{ error: string | null }> {
-    if (!canEdit) return { error: NO_EDIT_RIGHTS };
-    const trimmed = name.trim();
-    if (!trimmed) return { error: "Enter a name." };
-
-    const coach: Coach = { id: crypto.randomUUID(), name: trimmed, active: true };
-    const prev = dataRef.current;
-    applyData({ ...prev, coaches: [...prev.coaches, coach] });
-
-    const { error } = await supabase
-      .from("rota_coaches")
-      .insert({ id: coach.id, site_id: siteId, name: coach.name });
-    if (error) {
-      applyData(prev);
-      return { error: error.message };
-    }
-    return { error: null };
-  }
-
-  async function renameCoach(
-    coachId: string,
-    name: string
-  ): Promise<{ error: string | null }> {
-    if (!canEdit) return { error: NO_EDIT_RIGHTS };
-    const trimmed = name.trim();
-    if (!trimmed) return { error: "Enter a name." };
-
-    const prev = dataRef.current;
-    applyData({
-      ...prev,
-      coaches: prev.coaches.map((c) => (c.id === coachId ? { ...c, name: trimmed } : c)),
-    });
-
-    const { error } = await supabase
-      .from("rota_coaches")
-      .update({ name: trimmed })
-      .eq("id", coachId);
-    if (error) {
-      applyData(prev);
-      return { error: error.message };
-    }
-    return { error: null };
-  }
-
-  async function deactivateCoach(coachId: string): Promise<{ error: string | null }> {
-    if (!canEdit) return { error: NO_EDIT_RIGHTS };
-    const prev = dataRef.current;
-    applyData({
-      ...prev,
-      coaches: prev.coaches.map((c) => (c.id === coachId ? { ...c, active: false } : c)),
-    });
-
-    const { error } = await supabase
-      .from("rota_coaches")
-      .update({ active: false })
-      .eq("id", coachId);
-    if (error) {
-      applyData(prev);
-      return { error: error.message };
-    }
-    return { error: null };
-  }
-
   async function removeCoachFromDay(day: number, coachId: string) {
     const current = dataRef.current;
     const row = current.roster.find(
@@ -683,15 +605,18 @@ export default function RotaBoard({
     );
     if (!row) return;
 
+    // Their classes that day aren't deleted: they move to Unassigned, keeping
+    // whose group each one is in set_coach_id (filled from coach_id where it
+    // was NULL, i.e. where it wasn't a cover).
     const affected = current.classes.filter(
       (c) => c.day_of_week === day && c.coach_id === coachId
     );
     if (
       affected.length &&
       !window.confirm(
-        `Remove ${coachName(coachId)} from ${DAY_NAMES[day]}? This will also remove ${
-          affected.length
-        } class(es) in their column.`
+        `Remove ${coachName(coachId)} from ${DAY_NAMES[day]}? Their ${affected.length} ${
+          affected.length === 1 ? "class" : "classes"
+        } will move to Unassigned.`
       )
     ) {
       return;
@@ -700,8 +625,10 @@ export default function RotaBoard({
     const next: BoardData = {
       ...current,
       roster: current.roster.filter((r) => r.id !== row.id),
-      classes: current.classes.filter(
-        (c) => !(c.day_of_week === day && c.coach_id === coachId)
+      classes: current.classes.map((c) =>
+        c.day_of_week === day && c.coach_id === coachId
+          ? { ...c, coach_id: null, set_coach_id: c.set_coach_id ?? coachId }
+          : c
       ),
     };
 
@@ -709,7 +636,7 @@ export default function RotaBoard({
 
     await commit(next, async () => {
       if (affected.length) {
-        const { error: classError } = await dataSource.deleteClassesForCoachDay(
+        const { error: classError } = await dataSource.unassignClassesForCoachDay(
           day,
           coachId
         );
@@ -739,12 +666,6 @@ export default function RotaBoard({
       titleInputRef.current?.focus();
       return;
     }
-    if (!modal.coachId) {
-      setError(
-        `Nobody is rostered on ${DAY_NAMES[modal.day]} yet — add a coach to that day first.`
-      );
-      return;
-    }
     if (modal.catalogueId === CUSTOM_CLASS && !modal.categoryKey) {
       setError("Choose a colour for this class.");
       return;
@@ -763,10 +684,14 @@ export default function RotaBoard({
     const current = dataRef.current;
     // Non-cover is stored as a null set_coach_id, same as every existing row —
     // only a genuine divergence from the coach column is worth persisting.
+    // UNASSIGNED and NO_SET_COACH are both "", stored as NULL.
     const payload = {
       day_of_week: modal.day,
-      coach_id: modal.coachId,
-      set_coach_id: modal.setCoachId === modal.coachId ? null : modal.setCoachId,
+      coach_id: modal.coachId === UNASSIGNED ? null : modal.coachId,
+      set_coach_id:
+        modal.setCoachId === modal.coachId || modal.setCoachId === NO_SET_COACH
+          ? null
+          : modal.setCoachId,
       class_catalogue_id: modal.catalogueId === CUSTOM_CLASS ? null : modal.catalogueId,
       title,
       category_key: modal.categoryKey,
@@ -798,7 +723,7 @@ export default function RotaBoard({
 
   function openAddModal() {
     const day = 0;
-    const coachId = rosterByDay[day][0]?.coach_id ?? "";
+    const coachId = rosterByDay[day][0]?.coach_id ?? UNASSIGNED;
     setModal({
       editingId: null,
       catalogueId: "", // catalogue picker, nothing chosen yet
@@ -824,11 +749,11 @@ export default function RotaBoard({
       title: ev.title,
       categoryKey: ev.category_key,
       day: ev.day_of_week,
-      coachId: ev.coach_id,
+      coachId: ev.coach_id ?? UNASSIGNED,
       // Exactly as stored — a null set_coach_id displays as the same coach
       // (no cover), a genuine cover shows the actual set coach. Either way,
       // this is the open-time snapshot withCoachId compares later edits to.
-      setCoachId: ev.set_coach_id ?? ev.coach_id,
+      setCoachId: ev.set_coach_id ?? ev.coach_id ?? NO_SET_COACH,
       startMins: ev.start_mins,
       durationMins: ev.duration_mins,
       // A duration that doesn't match any preset exactly opens as custom with
@@ -876,7 +801,7 @@ export default function RotaBoard({
 
   /* ---------------- Drag & drop ---------------- */
 
-  function onZoneDrop(e: React.DragEvent, day: number, coachId: string) {
+  function onZoneDrop(e: React.DragEvent, day: number, coachId: string | null) {
     e.preventDefault();
     e.currentTarget.classList.remove("dropzone-hover");
 
@@ -908,7 +833,7 @@ export default function RotaBoard({
 
   const gridStyle: React.CSSProperties & Record<string, string> = {
     gridTemplateColumns: layout.cols.map((w) => w + "px").join(" "),
-    gridTemplateRows: `${DAY_HEAD_H}px ${COACH_HEAD_H}px repeat(${SLOTS}, ${SLOT_PX}px)`,
+    gridTemplateRows: `${DAY_HEAD_H}px ${coachHeadH}px repeat(${SLOTS}, ${SLOT_PX}px)`,
     ["--hourpx"]: HOUR_PX + "px",
     // Where the pinned coach row parks itself: immediately under the pinned
     // day-name row, so it needs that row's exact height.
@@ -921,13 +846,29 @@ export default function RotaBoard({
       )
     : undefined;
 
-  const coachPickerAvailable = coachPicker
-    ? activeCoaches.filter(
-        (c) => !roster.some((r) => r.day_of_week === coachPicker.day && r.coach_id === c.id)
-      )
+  const pickerOnDay = coachPicker ? rosterByDay[coachPicker.day] : [];
+  const pickerNotOnDay = coachPicker
+    ? rosterCandidates.filter((c) => !pickerOnDay.some((r) => r.coach_id === c.id))
     : [];
+  const pickerNeedle = pickerQuery.trim().toLowerCase();
+  const pickerAvailable = pickerNeedle
+    ? pickerNotOnDay.filter(
+        (c) =>
+          c.fullName.toLowerCase().includes(pickerNeedle) ||
+          c.jobTitle.toLowerCase().includes(pickerNeedle)
+      )
+    : pickerNotOnDay;
 
   const modalDayCoaches = modal ? rosterByDay[modal.day] : [];
+  // Set coach lists the assignable coaches, plus whoever the class already
+  // points at if they aren't one (moved, deactivated, or not a coach title),
+  // so opening and saving the modal never silently changes the stored value.
+  const modalSetCoachExtra =
+    modal &&
+    modal.setCoachId !== NO_SET_COACH &&
+    !rosterCandidates.some((c) => c.id === modal.setCoachId)
+      ? modal.setCoachId
+      : null;
   // A class can point at a catalogue entry that's since been deactivated. Keep
   // showing it so editing the class doesn't silently drop the link.
   const retiredCatalogueId =
@@ -938,6 +879,118 @@ export default function RotaBoard({
       ? modal.catalogueId
       : null;
 
+  function zoneDropProps(day: number, coachId: string | null) {
+    // Read-only boards don't accept a drop at all: without preventDefault on
+    // dragover the browser never treats this as a drop target.
+    if (!canEdit) return {};
+    return {
+      onDragOver: (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        e.currentTarget.classList.add("dropzone-hover");
+      },
+      onDragLeave: (e: React.DragEvent<HTMLDivElement>) =>
+        e.currentTarget.classList.remove("dropzone-hover"),
+      onDrop: (e: React.DragEvent<HTMLDivElement>) => onZoneDrop(e, day, coachId),
+    };
+  }
+
+  /** One class card. `flag` is the column's coach flag, if any. */
+  function renderCard(ev: ClassRow, flag: CoachFlag) {
+    const cover = isCover(ev);
+    const spanSlots = Math.max(1, Math.round(ev.duration_mins / SLOT_MIN));
+    const coachLine =
+      ev.coach_id === null
+        ? ev.set_coach_id
+          ? `Unassigned · for ${coachName(ev.set_coach_id)}`
+          : "No coach yet"
+        : `Coach: ${coachName(ev.coach_id)}`;
+    return (
+      <div
+        key={ev.id}
+        className={`card${cover ? " is-cover" : ""}${flag ? " needs-coach" : ""}`}
+        style={{
+          background: categoryByKey.get(ev.category_key)?.color_hex ?? "#9AA2AB",
+          top: topPx(ev.start_mins),
+          height: spanSlots * SLOT_PX - 2,
+        }}
+        draggable={canEdit}
+        onDragStart={
+          canEdit
+            ? (e) => {
+                e.currentTarget.classList.add("dragging");
+                grabOffsetY.current =
+                  e.clientY - e.currentTarget.getBoundingClientRect().top;
+                e.dataTransfer.setData(
+                  "text/plain",
+                  JSON.stringify({ type: "class", id: ev.id })
+                );
+                e.dataTransfer.effectAllowed = "move";
+              }
+            : undefined
+        }
+        onDragEnd={canEdit ? (e) => e.currentTarget.classList.remove("dragging") : undefined}
+        // The modal is an editor, so read-only users don't open it. The card
+        // already carries the title, times and coach.
+        onClick={canEdit ? () => openEditModal(ev) : undefined}
+      >
+        {canEdit && (
+          <div
+            className="delete"
+            title="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteClass(ev.id);
+            }}
+          >
+            ×
+          </div>
+        )}
+        {cover && <div className="cover-badge">COVER</div>}
+        <div className="title">{ev.title}</div>
+        <div className="meta">{timeRangeLabel(ev.start_mins, ev.duration_mins)}</div>
+        <div className="coachline">{coachLine}</div>
+        {flag && (
+          <div className="needs-coach-line">
+            {flag === "moved" ? `Needs a ${siteName} coach` : "Needs an active coach"}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /** The drop zones (one per lane) and their cards for one column. */
+  function renderZones(
+    keyPrefix: string,
+    day: number,
+    dropCoachId: string | null,
+    startCol: number,
+    laneCount: number,
+    lanes: Map<string, number>,
+    list: ClassRow[],
+    flag: CoachFlag,
+    unassigned = false
+  ) {
+    return Array.from({ length: laneCount }, (_, lane) => (
+      <div
+        key={keyPrefix + "-" + lane}
+        className={unassigned && lane === 0 ? "unassigned-zone" : undefined}
+        style={{
+          gridColumn: `${startCol + lane}`,
+          gridRow: `3 / span ${SLOTS}`,
+          position: "relative",
+        }}
+        {...zoneDropProps(day, dropCoachId)}
+      >
+        {list
+          .filter((ev) => (lanes.get(ev.id) ?? 0) === lane)
+          .map((ev) => renderCard(ev, flag))}
+      </div>
+    ));
+  }
+
+  const usersLabel = "Admin › Users";
+
   return (
     <div
       className={`${styles.root} ${styles.fill}${canEdit ? "" : ` ${styles.readonly}`}`}
@@ -946,27 +999,27 @@ export default function RotaBoard({
         <div className="text-[13px] text-slate-light">
           Each day is split into a column per coach working that day. Drag a class into a
           different coach&apos;s column to mark them as covering it — the card still shows
-          whose group it really is.
+          whose group it really is. Coaches are everyone with an account at {siteName}; to
+          add someone new, create them in{" "}
+          {canManageUsers ? (
+            <Link href="/admin/users" className="font-semibold text-orange-dark hover:underline">
+              {usersLabel}
+            </Link>
+          ) : (
+            usersLabel
+          )}
+          .
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {toolbarExtra}
           {exportSpec && (
             <RotaExportButton
               spec={exportSpec}
-              coaches={coaches}
+              directory={directory}
               roster={roster}
               classes={classes}
               categories={categories}
             />
-          )}
-          {canManageCoaches && canEdit && (
-            <button
-              className="btn btn-ghost toolbar-btn"
-              style={{ border: "1px solid var(--line)" }}
-              onClick={() => setManageCoachesOpen(true)}
-            >
-              Manage coaches
-            </button>
           )}
           <button
             className="add-btn toolbar-btn"
@@ -989,6 +1042,29 @@ export default function RotaBoard({
         </div>
       )}
 
+      {/* Coaches who have moved site or been deactivated since they were put on
+          this rota. Counted per person, both cases together. */}
+      {flaggedPeople.length > 0 && (
+        <div className="flag-banner">
+          <div className="flag-banner-title">
+            {flaggedPeople.length === 1
+              ? `1 coach on this rota is no longer at ${siteName}`
+              : `${flaggedPeople.length} coaches on this rota are no longer at ${siteName}`}
+          </div>
+          <ul>
+            {flaggedPeople.map((p) => (
+              <li key={p.coachId}>
+                <b>{coachName(p.coachId)}</b>{" "}
+                {p.flag === "moved"
+                  ? `(now at ${directory.byId.get(p.coachId)?.site ?? "another site"})`
+                  : "(account deactivated)"}{" "}
+                — {p.days.map((d) => DAY_NAMES[d].slice(0, 3)).join(", ")}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {error && (
         <div className="board-error">
           <span>Couldn&apos;t save: {error}</span>
@@ -1005,6 +1081,7 @@ export default function RotaBoard({
           {DAY_NAMES.map((dayName, d) => {
             const info = layout.dayCols[d];
             const dayRoster = rosterByDay[d];
+            const unassigned = layout.unassignedCols.get(d);
 
             return (
               <Fragment key={"day-" + d}>
@@ -1029,53 +1106,82 @@ export default function RotaBoard({
 
                 {dayRoster.map((row) => {
                   const ci = layout.coachCols.get(d + "|" + row.coach_id)!;
+                  const flag = directory.flag(row.coach_id);
                   const statusClass =
                     row.status === "leave"
                       ? "status-leave"
                       : row.status === "sick"
                         ? "status-sick"
                         : "";
+                  const nameButton = (
+                    <button
+                      type="button"
+                      className={`cname ${statusClass}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Everything in the popover is a write, and the
+                        // badges it would explain (🔑 ⭐ 💰) are already on
+                        // this pill — so read-only users don't open it.
+                        if (!canEdit) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setPopover({
+                          day: d,
+                          coachId: row.coach_id,
+                          top: rect.bottom + 6,
+                          left: Math.min(rect.left, window.innerWidth - 224),
+                        });
+                      }}
+                    >
+                      {flag === "moved" && (
+                        <span className="flag-icon" aria-hidden>
+                          ⚠
+                        </span>
+                      )}
+                      {row.is_key_holder && (
+                        <span className="badge-icon" title="Key holder">
+                          🔑
+                        </span>
+                      )}
+                      <span className="cname-text">{coachName(row.coach_id)}</span>
+                      {row.is_lead && (
+                        <span className="badge-icon" title="Lead coach">
+                          ⭐
+                        </span>
+                      )}
+                      {row.is_cashing_up && (
+                        <span className="badge-icon" title="Cashing up">
+                          💰
+                        </span>
+                      )}
+                    </button>
+                  );
                   return (
                     <div
                       key={"pill-" + row.id}
-                      className="coach-head"
+                      className={`coach-head${flag ? ` flag-${flag}` : ""}`}
                       style={{ gridColumn: `${ci.startCol} / span ${ci.laneCount}` }}
                     >
-                      <button
-                        type="button"
-                        className={`cname ${statusClass}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Everything in the popover is a write, and the
-                          // badges it would explain (🔑 ⭐ 💰) are already on
-                          // this pill — so read-only users don't open it.
-                          if (!canEdit) return;
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setPopover({
-                            day: d,
-                            coachId: row.coach_id,
-                            top: rect.bottom + 6,
-                            left: Math.min(rect.left, window.innerWidth - 224),
-                          });
-                        }}
-                      >
-                        {row.is_key_holder && (
-                          <span className="badge-icon" title="Key holder">
-                            🔑
-                          </span>
-                        )}
-                        {coachName(row.coach_id)}
-                        {row.is_lead && (
-                          <span className="badge-icon" title="Lead coach">
-                            ⭐
-                          </span>
-                        )}
-                        {row.is_cashing_up && (
-                          <span className="badge-icon" title="Cashing up">
-                            💰
-                          </span>
-                        )}
-                      </button>
+                      {flag ? (
+                        <div className="flag-stack">
+                          {nameButton}
+                          <div className="flag-status">
+                            {flag === "moved"
+                              ? `Now at ${directory.byId.get(row.coach_id)?.site ?? "another site"}`
+                              : "Account deactivated"}
+                          </div>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="flag-remove"
+                              onClick={() => removeCoachFromDay(d, row.coach_id)}
+                            >
+                              Remove from {dayName}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        nameButton
+                      )}
                       {canEdit && (
                         <button
                           type="button"
@@ -1089,6 +1195,20 @@ export default function RotaBoard({
                     </div>
                   );
                 })}
+
+                {/* No roster row behind this column, so no badges, popover,
+                    × or shift markers — just the label and how many. */}
+                {unassigned && (
+                  <div
+                    className="coach-head unassigned"
+                    style={{
+                      gridColumn: `${unassigned.startCol} / span ${unassigned.laneCount}`,
+                    }}
+                  >
+                    <span className="unassigned-label">Unassigned</span>
+                    <span className="unassigned-count">{unassigned.classes.length}</span>
+                  </div>
+                )}
 
                 <div
                   className="day-cell"
@@ -1108,110 +1228,30 @@ export default function RotaBoard({
                 {dayRoster.map((row) => {
                   const key = d + "|" + row.coach_id;
                   const ci = layout.coachCols.get(key)!;
-                  const lanes = layout.lanesByCoach.get(key)!;
-                  const dayClasses = classes.filter(
-                    (c) => c.day_of_week === d && c.coach_id === row.coach_id
+                  return renderZones(
+                    "zone-" + row.id,
+                    d,
+                    row.coach_id,
+                    ci.startCol,
+                    ci.laneCount,
+                    layout.lanesByCoach.get(key)!,
+                    classes.filter((c) => c.day_of_week === d && c.coach_id === row.coach_id),
+                    directory.flag(row.coach_id)
                   );
-
-                  return Array.from({ length: ci.laneCount }, (_, lane) => (
-                    <div
-                      key={"zone-" + row.id + "-" + lane}
-                      style={{
-                        gridColumn: `${ci.startCol + lane}`,
-                        gridRow: `3 / span ${SLOTS}`,
-                        position: "relative",
-                      }}
-                      // Read-only boards don't accept a drop at all: without
-                      // preventDefault on dragover the browser never treats
-                      // this as a drop target.
-                      onDragOver={
-                        canEdit
-                          ? (e) => {
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = "move";
-                              e.currentTarget.classList.add("dropzone-hover");
-                            }
-                          : undefined
-                      }
-                      onDragLeave={
-                        canEdit
-                          ? (e) => e.currentTarget.classList.remove("dropzone-hover")
-                          : undefined
-                      }
-                      onDrop={canEdit ? (e) => onZoneDrop(e, d, row.coach_id) : undefined}
-                    >
-                      {dayClasses
-                        .filter((ev) => (lanes.get(ev.id) ?? 0) === lane)
-                        .map((ev) => {
-                          const isCover =
-                            !!ev.set_coach_id && ev.set_coach_id !== ev.coach_id;
-                          const spanSlots = Math.max(
-                            1,
-                            Math.round(ev.duration_mins / SLOT_MIN)
-                          );
-                          return (
-                            <div
-                              key={ev.id}
-                              className={`card${isCover ? " is-cover" : ""}`}
-                              style={{
-                                background:
-                                  categoryByKey.get(ev.category_key)?.color_hex ??
-                                  "#9AA2AB",
-                                top: topPx(ev.start_mins),
-                                height: spanSlots * SLOT_PX - 2,
-                              }}
-                              draggable={canEdit}
-                              onDragStart={
-                                canEdit
-                                  ? (e) => {
-                                      e.currentTarget.classList.add("dragging");
-                                      grabOffsetY.current =
-                                        e.clientY -
-                                        e.currentTarget.getBoundingClientRect().top;
-                                      e.dataTransfer.setData(
-                                        "text/plain",
-                                        JSON.stringify({ type: "class", id: ev.id })
-                                      );
-                                      e.dataTransfer.effectAllowed = "move";
-                                    }
-                                  : undefined
-                              }
-                              onDragEnd={
-                                canEdit
-                                  ? (e) => e.currentTarget.classList.remove("dragging")
-                                  : undefined
-                              }
-                              // The modal is an editor, so read-only users
-                              // don't open it. The card already carries the
-                              // title, times and coach.
-                              onClick={canEdit ? () => openEditModal(ev) : undefined}
-                            >
-                              {canEdit && (
-                                <div
-                                  className="delete"
-                                  title="Delete"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteClass(ev.id);
-                                  }}
-                                >
-                                  ×
-                                </div>
-                              )}
-                              {isCover && <div className="cover-badge">COVER</div>}
-                              <div className="title">{ev.title}</div>
-                              <div className="meta">
-                                {timeRangeLabel(ev.start_mins, ev.duration_mins)}
-                              </div>
-                              <div className="coachline">
-                                Coach: {coachName(ev.coach_id)}
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  ));
                 })}
+
+                {unassigned &&
+                  renderZones(
+                    "zone-unassigned-" + d,
+                    d,
+                    null,
+                    unassigned.startCol,
+                    unassigned.laneCount,
+                    unassigned.lanes,
+                    unassigned.classes,
+                    null,
+                    true
+                  )}
 
                 {/* Off-shift hatching and the draggable shift markers span the
                     coach's whole column (all lanes combined), not just lane 0 —
@@ -1307,7 +1347,7 @@ export default function RotaBoard({
         </div>
       </div>
 
-      {roster.length === 0 && (
+      {roster.length === 0 && classes.length === 0 && (
         <div className="empty-note">
           {canEdit
             ? `No rota saved for ${scopeLabel} yet — use “+ coach” on a day to start building it.`
@@ -1378,67 +1418,66 @@ export default function RotaBoard({
 
       {coachPicker && (
         <div
-          className="coach-popover"
+          className="coach-popover coach-picker"
           style={{ top: coachPicker.top, left: coachPicker.left }}
           onClick={(e) => e.stopPropagation()}
         >
-          <h4>Add coach — {DAY_NAMES[coachPicker.day]}</h4>
-          {coachPickerAvailable.length === 0 ? (
-            <div className="picker-empty">
-              {activeCoaches.length === 0
-                ? "No coaches yet — add one below."
-                : "Everyone active is already on this day."}
-            </div>
-          ) : (
-            coachPickerAvailable.map((c) => (
-              <button
-                type="button"
-                key={c.id}
-                className="opt"
-                onClick={() => addExistingCoachToDay(coachPicker.day, c.id)}
-              >
-                {c.name}
-              </button>
-            ))
+          <h4>Add a coach to {DAY_NAMES[coachPicker.day]}</h4>
+          <label className="picker-label" htmlFor="coach-picker-search">
+            Search {siteName} coaches
+          </label>
+          <input
+            id="coach-picker-search"
+            className="picker-search"
+            type="search"
+            value={pickerQuery}
+            onChange={(e) => setPickerQuery(e.target.value)}
+            autoFocus
+          />
+          <div className="picker-list">
+            {pickerAvailable.length === 0 ? (
+              <div className="picker-empty">
+                {rosterCandidates.length === 0
+                  ? `No coaches have an active account at ${siteName} yet.`
+                  : pickerNotOnDay.length === 0
+                    ? `Everyone is already on ${DAY_NAMES[coachPicker.day]}.`
+                    : `No coaches match “${pickerQuery.trim()}”.`}
+              </div>
+            ) : (
+              pickerAvailable.map((c) => (
+                <div key={c.id} className="picker-row">
+                  <div className="picker-who">
+                    <div className="picker-name">{c.fullName || "Unnamed"}</div>
+                    <div className="picker-title">{c.jobTitle}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="picker-add"
+                    onClick={() => addExistingCoachToDay(coachPicker.day, c.id)}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+          {pickerOnDay.length > 0 && (
+            <>
+              <div className="picker-section">Already on {DAY_NAMES[coachPicker.day]}</div>
+              <div className="picker-chips">
+                {pickerOnDay.map((r) => (
+                  <span key={r.id} className="picker-chip">
+                    {coachName(r.coach_id)}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
-          <hr />
-          {/* A plain button rather than a <form onSubmit> — submitting a form
-              whose own handler unmounts it (via setCoachPicker(null)) races
-              the browser's native submission and silently drops the create. */}
-          <div className="picker-form">
-            <input
-              type="text"
-              placeholder="New coach name"
-              value={newCoachName}
-              onChange={(e) => setNewCoachName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  createCoachAndAddToDay(coachPicker.day, newCoachName);
-                }
-              }}
-              autoFocus
-            />
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => createCoachAndAddToDay(coachPicker.day, newCoachName)}
-            >
-              Add
-            </button>
+          <div className="picker-footer">
+            Someone missing? Coaches appear here once they have an active account at{" "}
+            {siteName}. An RGM, Head of Gymnastics or Head of Operations can add them.
           </div>
         </div>
-      )}
-
-      {manageCoachesOpen && canManageCoaches && canEdit && (
-        <ManageCoachesModal
-          coaches={activeCoaches}
-          daysByCoach={standardDaysByCoach}
-          onAdd={addCoach}
-          onRename={renameCoach}
-          onDeactivate={deactivateCoach}
-          onClose={() => setManageCoachesOpen(false)}
-        />
       )}
 
       {modal && (
@@ -1528,7 +1567,9 @@ export default function RotaBoard({
                   value={modal.day}
                   onChange={(e) => {
                     const day = parseInt(e.target.value, 10);
-                    setModal(withCoachId({ ...modal, day }, rosterByDay[day][0]?.coach_id ?? ""));
+                    setModal(
+                      withCoachId({ ...modal, day }, rosterByDay[day][0]?.coach_id ?? UNASSIGNED)
+                    );
                   }}
                 >
                   {DAY_NAMES.map((n, i) => (
@@ -1543,18 +1584,14 @@ export default function RotaBoard({
                 <select
                   id="f-coach"
                   value={modal.coachId}
-                  disabled={modalDayCoaches.length === 0}
                   onChange={(e) => setModal(withCoachId(modal, e.target.value))}
                 >
-                  {modalDayCoaches.length === 0 ? (
-                    <option value="">Nobody rostered</option>
-                  ) : (
-                    modalDayCoaches.map((r) => (
-                      <option key={r.id} value={r.coach_id}>
-                        {coachName(r.coach_id)}
-                      </option>
-                    ))
-                  )}
+                  {modalDayCoaches.map((r) => (
+                    <option key={r.id} value={r.coach_id}>
+                      {coachName(r.coach_id) + flagTag(directory.flag(r.coach_id))}
+                    </option>
+                  ))}
+                  <option value={UNASSIGNED}>Unassigned</option>
                 </select>
               </div>
             </div>
@@ -1568,11 +1605,17 @@ export default function RotaBoard({
                 value={modal.setCoachId}
                 onChange={(e) => setModal({ ...modal, setCoachId: e.target.value })}
               >
-                {coaches.map((c) => (
+                <option value={NO_SET_COACH}>None</option>
+                {rosterCandidates.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {coachName(c.id)}
                   </option>
                 ))}
+                {modalSetCoachExtra && (
+                  <option value={modalSetCoachExtra}>
+                    {coachName(modalSetCoachExtra) + flagTag(directory.flag(modalSetCoachExtra))}
+                  </option>
+                )}
               </select>
               <div className="field-hint">
                 Defaults to match the coach column. Only change this for a genuine

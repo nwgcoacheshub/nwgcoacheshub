@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   PAGE_H,
   exportScaleFor,
@@ -11,7 +11,8 @@ import RotaExportLayout, {
   type ExportWeek,
   type UndatedLabels,
 } from "./RotaExportLayout";
-import type { Category, ClassRow, Coach, RosterRow } from "./RotaBoard";
+import type { RotaDirectory } from "@/lib/rota/people";
+import type { Category, ClassRow, RosterRow } from "./RotaBoard";
 
 /**
  * What the export needs to know about the board it's exporting, beyond the rota
@@ -53,13 +54,14 @@ export type RotaExportSpec = {
  */
 export default function RotaExportButton({
   spec,
-  coaches,
+  directory,
   roster,
   classes,
   categories,
 }: {
   spec: RotaExportSpec;
-  coaches: Coach[];
+  /** The board's coach lookup: same names and flags as on screen. */
+  directory: RotaDirectory;
   roster: RosterRow[];
   classes: ClassRow[];
   categories: Category[];
@@ -74,13 +76,6 @@ export default function RotaExportButton({
   const [dense, setDense] = useState(false);
   const captureRef = useRef<HTMLDivElement | null>(null);
 
-  // Coach names resolve from the full list, deactivated coaches included, so a
-  // historical week still names whoever was on it.
-  const coachNameById = useMemo(
-    () => new Map(coaches.map((c) => [c.id, c.name])),
-    [coaches]
-  );
-
   async function run() {
     if (plan) return;
     setError(null);
@@ -89,7 +84,7 @@ export default function RotaExportButton({
     // state from before the render it's about to trigger, so the state copy is
     // only good for rendering, not for reading back here.
     const pending = planExport(
-      coaches,
+      directory,
       roster,
       classes,
       categories.map((c) => c.key)
@@ -187,7 +182,7 @@ export default function RotaExportButton({
               undated={spec.undated}
               plan={plan}
               categories={categories}
-              coachNameById={coachNameById}
+              directory={directory}
             />
           </div>
         </div>

@@ -7,9 +7,9 @@ import RotaBoard, {
   type CatalogueItem,
   type Category,
   type ClassRow,
-  type Coach,
   type RosterRow,
 } from "./RotaBoard";
+import type { RosterCandidate, RotaPerson } from "@/lib/rota/people";
 
 /**
  * Standard Rota board, wired to the site's template tables.
@@ -23,20 +23,25 @@ export default function StandardRotaView({
   siteName,
   categories,
   catalogue,
-  initialCoaches,
+  people,
+  rosterCandidates,
   initialRoster,
   initialClasses,
   exportSpec,
+  canManageUsers,
   canEdit,
 }: {
   siteId: string;
   siteName: string;
   categories: Category[];
   catalogue: CatalogueItem[];
-  initialCoaches: Coach[];
+  people: RotaPerson[];
+  rosterCandidates: RosterCandidate[];
   initialRoster: RosterRow[];
   initialClasses: ClassRow[];
   exportSpec: RotaExportSpec;
+  /** manage_users, resolved server-side: makes "Admin › Users" a link. */
+  canManageUsers: boolean;
   /** edit_rota at this site, resolved server-side; passed straight through. */
   canEdit: boolean;
 }) {
@@ -46,14 +51,15 @@ export default function StandardRotaView({
     <RotaBoard
       dataSource={dataSource}
       scopeLabel={siteName}
-      siteId={siteId}
+      siteName={siteName}
       categories={categories}
       catalogue={catalogue}
-      initialCoaches={initialCoaches}
+      people={people}
+      rosterCandidates={rosterCandidates}
       initialRoster={initialRoster}
       initialClasses={initialClasses}
       exportSpec={exportSpec}
-      canManageCoaches
+      canManageUsers={canManageUsers}
       canEdit={canEdit}
     />
   );

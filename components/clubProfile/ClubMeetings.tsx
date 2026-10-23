@@ -5,10 +5,10 @@ import { meetingWhenLabel, weekPatternLabel } from "@/lib/clubProfile/format";
 import { parseWeekDate, weekDayLabels } from "@/lib/rota/week";
 import {
   CYCLE_WEEK_COUNT,
+  type AttendeeOption,
   type MeetingCategoryGroup,
   type MeetingOccurrenceGroup,
 } from "@/lib/clubProfile/meetings";
-import type { RosterCoach } from "@/lib/clubProfile/attendance";
 import { primaryButtonClass } from "@/components/formStyles";
 import ManageMeetingsModal from "./ManageMeetingsModal";
 
@@ -27,7 +27,8 @@ export default function ClubMeetings({
   weeklyGroups,
   monthlyGroups,
   manageGroups,
-  coaches,
+  attendeeOptions,
+  attendeeLabels,
 }: {
   siteId: string;
   canEdit: boolean;
@@ -35,7 +36,10 @@ export default function ClubMeetings({
   weeklyGroups: MeetingCategoryGroup[];
   monthlyGroups: MeetingOccurrenceGroup[];
   manageGroups: MeetingCategoryGroup[];
-  coaches: RosterCoach[];
+  /** site_rota_roster: who can be ticked as an attendee. */
+  attendeeOptions: AttendeeOption[];
+  /** Display label for every id site_rota_people knows, flag tag included. */
+  attendeeLabels: Record<string, string>;
 }) {
   const [view, setView] = useState<"weekly" | "monthly">("weekly");
   const [manageOpen, setManageOpen] = useState(false);
@@ -143,7 +147,8 @@ export default function ClubMeetings({
         <ManageMeetingsModal
           siteId={siteId}
           categoryGroups={manageGroups}
-          coaches={coaches}
+          attendeeOptions={attendeeOptions}
+          attendeeLabels={attendeeLabels}
           onClose={() => setManageOpen(false)}
         />
       )}

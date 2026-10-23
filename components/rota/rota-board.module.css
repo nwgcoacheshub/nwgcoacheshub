@@ -385,6 +385,103 @@
   background: #2b2b2b;
 }
 
+/* ---------- Unassigned column ----------
+   coach_id NULL classes, at the end of a day that has any. No roster row,
+   so no badges or shift markers: just the label and a count. */
+.root :global(.coach-head.unassigned) {
+  border-left: 1px dashed #9aa2ab;
+  gap: 6px;
+}
+.root :global(.coach-head .unassigned-label) {
+  font-size: 12.5px;
+  line-height: 16px;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.root :global(.coach-head .unassigned-count) {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--ink-soft);
+}
+.root :global(.unassigned-zone) {
+  border-left: 1px dashed #9aa2ab;
+}
+
+/* ---------- Flagged coaches ----------
+   A roster row whose profile has moved site (amber) or been deactivated
+   (grey). The coach row is COACH_HEAD_FLAGGED_H tall while any exist. */
+.root :global(.coach-head.flag-moved) {
+  background: #fdf3df;
+}
+.root :global(.coach-head.flag-inactive) {
+  background: #eef0f2;
+}
+.root :global(.coach-head .flag-stack) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+.root :global(.coach-head .flag-icon) {
+  color: #e0a11b;
+  font-size: 12px;
+  line-height: 1;
+}
+.root :global(.coach-head.flag-inactive .cname-text) {
+  text-decoration: line-through;
+  color: var(--ink-soft);
+}
+.root :global(.coach-head .flag-status) {
+  font-size: 10.5px;
+  line-height: 13px;
+  color: var(--ink-soft);
+}
+.root :global(.coach-head .flag-remove) {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--brand-dark);
+  font-size: 10.5px;
+  line-height: 13px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.root :global(.coach-head .flag-remove:hover) {
+  background: var(--brand-tint);
+}
+.root :global(.card.needs-coach) {
+  outline: 2px dashed var(--ink-soft);
+  outline-offset: 1px;
+}
+.root :global(.card .needs-coach-line) {
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.fill :global(.flag-banner) {
+  margin: 0 20px 12px;
+}
+.root :global(.flag-banner) {
+  border: 1px solid #f1d9a6;
+  background: #fdf6e7;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+}
+.root :global(.flag-banner-title) {
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.root :global(.flag-banner ul) {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
 /* ---------- Coach status popover ---------- */
 .root :global(.coach-popover) {
   position: fixed;
@@ -457,99 +554,109 @@
   background: #f5f6f7;
 }
 
-/* Per-day add-coach picker reuses .coach-popover/.opt for the coach list,
-   plus these for the empty state and the inline "new coach" form. */
-.root :global(.coach-popover .picker-empty) {
-  font-size: 12px;
+/* ---------- Add-coach picker ----------
+   Reuses .coach-popover for the shell; wider, for a name plus job title. */
+.root :global(.coach-popover.coach-picker) {
+  width: 280px;
+}
+.root :global(.coach-popover .picker-label) {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--ink-soft);
-  padding: 6px 7px 10px;
+  padding: 0 4px;
+  margin-bottom: 4px;
+  cursor: default;
 }
-.root :global(.coach-popover .picker-form) {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
+.root :global(.coach-popover .picker-label:hover) {
+  background: transparent;
 }
-.root :global(.coach-popover .picker-form input) {
-  flex: 1;
-  min-width: 0;
+.root :global(.coach-popover .picker-search) {
+  width: 100%;
   padding: 6px 7px;
   border-radius: 6px;
   border: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--ink);
+  margin-bottom: 6px;
 }
-.root :global(.coach-popover .picker-form input:focus) {
+.root :global(.coach-popover .picker-search:focus) {
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 2px var(--brand-tint);
 }
-.root :global(.coach-popover .picker-form .btn) {
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-/* ---------- Manage coaches modal ---------- */
-.root :global(.coach-manage-list) {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 320px;
+.root :global(.coach-popover .picker-list) {
+  max-height: 220px;
   overflow-y: auto;
-  margin-bottom: 14px;
 }
-.root :global(.coach-manage-row) {
+.root :global(.coach-popover .picker-row) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: 5px 7px;
+  border-radius: 6px;
 }
-.root :global(.coach-manage-row input[type="text"]) {
+.root :global(.coach-popover .picker-row:hover) {
+  background: #f5f6f7;
+}
+.root :global(.coach-popover .picker-who) {
   flex: 1;
   min-width: 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  font-size: 13px;
-  color: var(--ink);
 }
-.root :global(.coach-manage-row .name) {
-  flex: 1;
-  font-size: 13px;
+.root :global(.coach-popover .picker-name) {
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--ink);
-  word-break: break-word;
 }
-.root :global(.coach-manage-row .row-actions) {
-  display: flex;
-  gap: 4px;
-  flex: none;
+.root :global(.coach-popover .picker-title) {
+  font-size: 11px;
+  color: var(--ink-soft);
 }
-.root :global(.coach-manage-row .row-actions button) {
+.root :global(.coach-popover .picker-add) {
   border: 1px solid var(--line);
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--brand-dark);
   font-size: 11.5px;
   font-weight: 600;
-  padding: 4px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
   cursor: pointer;
-  white-space: nowrap;
+  flex: none;
 }
-.root :global(.coach-manage-row .row-actions button:hover) {
-  background: #f5f6f7;
-  color: var(--ink);
+.root :global(.coach-popover .picker-add:hover) {
+  background: var(--brand-tint);
 }
-.root :global(.coach-manage-row .row-actions .danger:hover) {
-  background: #fdecea;
-  color: #a02a1c;
-  border-color: #f3c9c4;
-}
-.root :global(.coach-manage-empty) {
-  font-size: 12.5px;
+.root :global(.coach-popover .picker-empty) {
+  font-size: 12px;
   color: var(--ink-soft);
-  padding: 10px 4px;
+  padding: 6px 7px 10px;
+}
+.root :global(.coach-popover .picker-section) {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 8px 4px 4px;
+}
+.root :global(.coach-popover .picker-chips) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 4px;
+}
+.root :global(.coach-popover .picker-chip) {
+  font-size: 11.5px;
+  background: #f1f2f4;
+  color: var(--ink);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.root :global(.coach-popover .picker-footer) {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding: 8px 4px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-soft);
 }
 
 /* ---------- Modal ---------- */
@@ -713,7 +820,7 @@
   background: var(--brand-dark);
 }
 
-/* "Manage coaches" (.btn) and "+ Add class" (.add-btn) sit in the board
+/* "Export as PDF" (.btn) and "+ Add class" (.add-btn) sit in the board
    toolbar, not a modal — CLAUDE.md's compact-density pass (2026-07-29) sizes
    this pair to the site's standard button token (px-3.5 py-2, text-[13px],
    rounded-lg), same as e.g. UsersTable's primaryButtonClass/secondaryButtonClass.

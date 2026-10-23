@@ -21,8 +21,9 @@ export type SiteAccount = { id: string; name: string };
  * manage_club_roles insert/update/delete (0026), so a coach who forced this
  * into edit mode would still have every write rejected.
  *
- * The picker lists profiles at this site, because club_role_assignments.coach_id
- * references profiles — these are real accounts, not rota_coaches board entries.
+ * The picker lists active profiles at this site (site_role_candidates), because
+ * club_role_assignments.coach_id references profiles. Unlike the rota's
+ * site_rota_roster it isn't limited to coaching job titles.
  */
 export default function StaffRolesModal({
   roleGroups,

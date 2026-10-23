@@ -11,8 +11,6 @@ export type RosterRow = {
   status: string;
 };
 
-export type RosterCoach = { id: string; name: string };
-
 export type AttendanceRow = {
   coachId: string;
   name: string;
@@ -41,9 +39,9 @@ function isCoachStatus(value: string): value is CoachStatus {
  */
 export function buildAttendanceRows(
   roster: RosterRow[],
-  coaches: RosterCoach[]
+  /** Profile id -> name, from site_rota_people. */
+  nameById: Map<string, string>
 ): AttendanceRow[] {
-  const nameById = new Map(coaches.map((c) => [c.id, c.name]));
   const byCoach = new Map<string, (CoachStatus | null)[]>();
 
   for (const row of roster) {
@@ -59,8 +57,8 @@ export function buildAttendanceRows(
   return [...byCoach.entries()]
     .map(([coachId, days]) => ({
       coachId,
-      // A roster row can outlive its coach row being deactivated and dropped
-      // from the site list, so don't assume the name lookup hits.
+      // site_rota_people returns an empty set to anyone who can't read this
+      // site's rota, so don't assume the name lookup hits.
       name: nameById.get(coachId) ?? "Unknown coach",
       days,
     }))
@@ -80,9 +78,9 @@ export type WorkedTotal = { coachId: string; name: string; minutes: number };
  */
 export function sumWorkedMinutes(
   roster: RosterRow[],
-  coaches: RosterCoach[]
+  /** Profile id -> name, from site_rota_people. */
+  nameById: Map<string, string>
 ): WorkedTotal[] {
-  const nameById = new Map(coaches.map((c) => [c.id, c.name]));
   const totals = new Map<string, number>();
 
   for (const row of roster) {

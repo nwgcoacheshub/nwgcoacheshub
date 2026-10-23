@@ -22,6 +22,11 @@ export const DIVIDER_W = 14;
 // rows so these hold on any platform's system font.
 export const DAY_HEAD_H = 60;
 export const COACH_HEAD_H = 34;
+// The coach row while any coach on the board is flagged (moved site or
+// deactivated): room for the name, a status line and a "Remove from {Day}"
+// button that may wrap to two lines in a 128px column. It's one grid row, so
+// every header in it grows together.
+export const COACH_HEAD_FLAGGED_H = 86;
 
 export const MIN_SHIFT_MINS = 30; // a shift can't be squashed below this
 

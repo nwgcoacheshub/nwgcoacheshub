@@ -9,8 +9,13 @@ import {
   buildAttendanceRows,
   sumWorkedMinutes,
   type RosterRow,
-  type RosterCoach,
 } from "@/lib/clubProfile/attendance";
+import {
+  flagTag,
+  makeDirectory,
+  toRosterCandidates,
+  toRotaPeople,
+} from "@/lib/rota/people";
 import {
   buildMeetingViews,
   buildMonthlyOccurrenceGroups,
@@ -74,7 +79,8 @@ export default async function ClubProfileSitePage({
 
   const [
     updatesRes,
-    coachesRes,
+    peopleRes,
+    candidatesRes,
     heroesRes,
     categoriesRes,
     rolesRes,
@@ -89,11 +95,13 @@ export default async function ClubProfileSitePage({
       .eq("site_id", site.id)
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false }),
-    supabase
-      .from("rota_coaches")
-      .select("id, name")
-      .eq("site_id", site.id)
-      .order("name"),
+    // Roster and attendee ids point at profiles (0029). Names and status come
+    // from site_rota_people; the meeting picker's list from site_rota_roster,
+    // fetched only for someone who can edit meetings.
+    supabase.rpc("site_rota_people", { p_site_id: site.id }),
+    canEditMeetings
+      ? supabase.rpc("site_rota_roster", { p_site_id: site.id })
+      : Promise.resolve({ data: [] }),
     supabase
       .from("heroes")
       .select("id, name, dob")
@@ -130,7 +138,8 @@ export default async function ClubProfileSitePage({
   ]);
 
   const updates = updatesRes.data ?? [];
-  const coaches = (coachesRes.data ?? []) as RosterCoach[];
+  const rosterCandidates = toRosterCandidates(candidatesRes.data);
+  const directory = makeDirectory(toRotaPeople(peopleRes.data), rosterCandidates, site.name);
   const heroes = heroesRes.data ?? [];
   const assignments = assignmentsRes.data ?? [];
   const roster = (rosterRes.data ?? []) as RosterRow[];
@@ -230,16 +239,23 @@ export default async function ClubProfileSitePage({
       })),
   }));
 
-  // rota_coaches is site-readable by any coach (see lib/clubProfile/names.ts),
-  // so attendee names come straight off the roster already fetched above
-  // rather than through resolve_profile_names().
-  const coachNameById = new Map(coaches.map((c) => [c.id, c.name]));
+  // Roster and attendee names come from site_rota_people (see
+  // lib/rota/people.ts), not resolve_profile_names(). The attendance grid and
+  // staff hours keep full names; meetings use the rota's short names, with a
+  // "(moved)" / "(inactive)" tag for anyone no longer assignable here.
+  const fullNameById = new Map(
+    [...directory.byId.keys()].map((id) => [id, directory.fullName(id)])
+  );
+  const attendeeLabels: Record<string, string> = {};
+  for (const id of directory.byId.keys()) {
+    attendeeLabels[id] = directory.name(id) + flagTag(directory.flag(id));
+  }
 
   const meetingViews = buildMeetingViews({
     meetings,
     attendees: meetingAttendees,
     cycleWeeks: meetingCycleWeeks,
-    coachNameById,
+    attendeeNameById: new Map(Object.entries(attendeeLabels)),
   });
 
   // Both read views are built here so the Weekly/Monthly toggle is a pure
@@ -285,7 +301,7 @@ export default async function ClubProfileSitePage({
       />
 
       <AttendanceGrid
-        rows={buildAttendanceRows(roster, coaches)}
+        rows={buildAttendanceRows(roster, fullNameById)}
         weekRange={weekRange}
         weekGenerated={Boolean(weekly)}
         siteSlug={site.slug}
@@ -298,7 +314,8 @@ export default async function ClubProfileSitePage({
         weeklyGroups={weeklyMeetingGroups}
         monthlyGroups={monthlyMeetingGroups}
         manageGroups={manageMeetingGroups}
-        coaches={coaches}
+        attendeeOptions={rosterCandidates.map((c) => ({ id: c.id, label: directory.name(c.id) }))}
+        attendeeLabels={attendeeLabels}
       />
 
       <ClubQuickLinks
@@ -306,7 +323,7 @@ export default async function ClubProfileSitePage({
         canManageRoles={canManageRoles}
         currentUserId={user?.id ?? null}
         heroes={heroSummaries}
-        workedTotals={sumWorkedMinutes(roster, coaches)}
+        workedTotals={sumWorkedMinutes(roster, fullNameById)}
         weekRange={weekRange}
         weekGenerated={Boolean(weekly)}
         roleGroups={roleGroups}

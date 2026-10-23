@@ -56,6 +56,7 @@ import {
   type ExportPlan,
   type PlannedCoach,
 } from "@/lib/rota/exportLayout";
+import { flagTag, type RotaDirectory } from "@/lib/rota/people";
 import type { Category, ClassRow } from "./RotaBoard";
 
 /** Which week this is, or null for an undated board. */
@@ -92,7 +93,7 @@ export default function RotaExportLayout({
   undated,
   plan,
   categories,
-  coachNameById,
+  directory,
 }: {
   siteName: string;
   week: ExportWeek | null;
@@ -100,7 +101,7 @@ export default function RotaExportLayout({
   undated?: UndatedLabels;
   plan: ExportPlan;
   categories: Category[];
-  coachNameById: Map<string, string>;
+  directory: RotaDirectory;
 }) {
   const categoryByKey = new Map(categories.map((c) => [c.key, c]));
   const labels = undated ?? STANDARD_ROTA_LABELS;
@@ -173,7 +174,7 @@ export default function RotaExportLayout({
                 coaches={day.coaches}
                 plan={plan}
                 categoryByKey={categoryByKey}
-                coachNameById={coachNameById}
+                directory={directory}
               />
             </div>
             {i < plan.days.length - 1 && (
@@ -380,7 +381,7 @@ function CoachHeadRow({ day, plan }: { day: PlannedCoach[]; plan: ExportPlan }) 
       ) : (
         day.map((coach, i) => (
           <div
-            key={coach.coachId}
+            key={coach.key}
             style={{
               width: coach.width,
               flex: "none",
@@ -398,21 +399,26 @@ function CoachHeadRow({ day, plan }: { day: PlannedCoach[]; plan: ExportPlan }) 
               style={{
                 fontSize: px,
                 lineHeight: 1.15,
-                fontWeight: 700,
+                fontWeight: coach.kind === "unassigned" ? 600 : 700,
+                fontStyle: coach.kind === "unassigned" ? "italic" : undefined,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 // Status is carried by the name's colour, as on the board, with
                 // the legend naming both — there is no room for a status tag at
                 // this column width.
                 color:
-                  coach.rosterRow.status === "leave"
-                    ? LEAVE
-                    : coach.rosterRow.status === "sick"
-                      ? SICK
-                      : INK,
+                  coach.kind === "unassigned"
+                    ? INK_SOFT
+                    : coach.rosterRow?.status === "leave"
+                      ? LEAVE
+                      : coach.rosterRow?.status === "sick"
+                        ? SICK
+                        : INK,
               }}
             >
-              {fitCoachName(coach.name, px, coach.width - 4, true)}
+              {coach.kind === "unassigned"
+                ? coach.name
+                : coachHeadLabel(coach.name, flagTag(coach.flag), px, coach.width - 4)}
             </span>
           </div>
         ))
@@ -421,18 +427,28 @@ function CoachHeadRow({ day, plan }: { day: PlannedCoach[]; plan: ExportPlan }) 
   );
 }
 
+/**
+ * A flagged coach's header always keeps its "(moved)" / "(inactive)" tag: the
+ * name is fitted into whatever width is left after it, then CSS clips.
+ */
+function coachHeadLabel(name: string, tag: string, px: number, availPx: number) {
+  if (!tag) return fitCoachName(name, px, availPx, true);
+  const tagW = textWidth(tag, px, true);
+  return fitCoachName(name, px, Math.max(0, availPx - tagW), true) + tag;
+}
+
 /* ---------------- Grid ---------------- */
 
 function DayGrid({
   coaches,
   plan,
   categoryByKey,
-  coachNameById,
+  directory,
 }: {
   coaches: PlannedCoach[];
   plan: ExportPlan;
   categoryByKey: Map<string, Category>;
-  coachNameById: Map<string, string>;
+  directory: RotaDirectory;
 }) {
   // Off-shift shading and the hour rules go in one backdrop layer beneath the
   // coach columns, so each is drawn once per day rather than once per column,
@@ -496,7 +512,7 @@ function DayGrid({
         <div style={{ display: "flex", height: "100%" }}>
           {coaches.map((coach, i) => (
             <div
-              key={coach.coachId}
+              key={coach.key}
               style={{
                 width: coach.width,
                 flex: "none",
@@ -526,7 +542,7 @@ function DayGrid({
                         ev={ev}
                         plan={plan}
                         category={categoryByKey.get(ev.category_key)}
-                        coachNameById={coachNameById}
+                        directory={directory}
                       />
                     ))}
                 </div>
@@ -553,33 +569,46 @@ function ClassCard({
   ev,
   plan,
   category,
-  coachNameById,
+  directory,
 }: {
   ev: ClassRow;
   plan: ExportPlan;
   category: Category | undefined;
-  coachNameById: Map<string, string>;
+  directory: RotaDirectory;
 }) {
   const bg = category?.color_hex ?? "#9AA2AB";
   const fg = readableTextOn(bg);
-  const isCover = !!ev.set_coach_id && ev.set_coach_id !== ev.coach_id;
+  const isCover = !!ev.coach_id && !!ev.set_coach_id && ev.set_coach_id !== ev.coach_id;
   const timeLabel = compactTimeRange(ev.start_mins, ev.duration_mins);
   const inner = cardInnerW(plan.laneW);
-  const deliveredBy = coachNameById.get(ev.coach_id) ?? "Unknown coach";
 
   // Cover, in descending order of how much room the column has: name the real
   // owner, else just flag it as cover, else let the dashed outline carry it on
   // its own. Sized at the tier's ceiling because the coach line is what's being
   // chosen here, and planCard needs it before it can pick a size.
+  //
+  // Unassigned (coach_id NULL) reads as on the board: "Unassigned · for
+  // {owner}" when there is one, falling back to "Unassigned" if that won't
+  // fit, otherwise "No coach yet".
   const ceilingSub = plan.tier.cardTitle * 0.87;
-  const shortName = fitCoachName(deliveredBy, ceilingSub, inner);
-  let coachLine = shortName;
-  if (isCover) {
-    const owner = fitCoachName(coachNameById.get(ev.set_coach_id!) ?? "Unknown coach", ceilingSub, inner);
-    const withOwner = `${shortName} · for ${owner}`;
-    const withTag = `${shortName} · cover`;
-    if (textWidth(withOwner, ceilingSub) <= inner) coachLine = withOwner;
-    else if (textWidth(withTag, ceilingSub) <= inner) coachLine = withTag;
+  let coachLine: string;
+  if (ev.coach_id === null) {
+    coachLine = "No coach yet";
+    if (ev.set_coach_id) {
+      const owner = fitCoachName(directory.name(ev.set_coach_id), ceilingSub, inner);
+      const withOwner = `Unassigned · for ${owner}`;
+      coachLine = textWidth(withOwner, ceilingSub) <= inner ? withOwner : "Unassigned";
+    }
+  } else {
+    const shortName = fitCoachName(directory.name(ev.coach_id), ceilingSub, inner);
+    coachLine = shortName;
+    if (isCover) {
+      const owner = fitCoachName(directory.name(ev.set_coach_id), ceilingSub, inner);
+      const withOwner = `${shortName} · for ${owner}`;
+      const withTag = `${shortName} · cover`;
+      if (textWidth(withOwner, ceilingSub) <= inner) coachLine = withOwner;
+      else if (textWidth(withTag, ceilingSub) <= inner) coachLine = withTag;
+    }
   }
 
   const card = planCard(
