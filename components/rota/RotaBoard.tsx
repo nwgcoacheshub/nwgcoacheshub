@@ -37,6 +37,7 @@ import {
   type RosterCandidate,
   type RotaPerson,
 } from "@/lib/rota/people";
+import { groupDay, isOrphan, unassignedCoachLines, type DayColumns } from "@/lib/rota/columns";
 import RotaExportButton, { type RotaExportSpec } from "./RotaExportButton";
 
 export type Category = { key: string; label: string; color_hex: string };
@@ -308,12 +309,13 @@ export default function RotaBoard({
   /**
    * Column planning, same shape as the mock: a time column, then one column
    * per coach per day (widened into extra lanes when their classes overlap),
-   * then an Unassigned column on any day with a coach_id NULL class, with a
-   * divider between days.
+   * then an Unassigned column on any day with a coach_id NULL or orphaned class
+   * (see lib/rota/columns.ts), with a divider between days.
    */
   const layout = useMemo(() => {
     const cols: number[] = [TIME_COL_W];
     const coachCols = new Map<string, { startCol: number; laneCount: number }>();
+    const groups: DayColumns[] = [];
     const lanesByCoach = new Map<string, Map<string, number>>();
     const unassignedCols = new Map<
       number,
@@ -325,11 +327,11 @@ export default function RotaBoard({
     for (let d = 0; d < 7; d++) {
       const dayStartCol = cursor;
       const dayRoster = rosterByDay[d];
+      const group = groupDay(d, dayRoster, classes);
+      groups.push(group);
 
       for (const row of dayRoster) {
-        const list = classes.filter(
-          (c) => c.day_of_week === d && c.coach_id === row.coach_id
-        );
+        const list = group.byCoach.get(row.coach_id) ?? [];
         const { lanes, laneCount } = laneAssign(list);
         const key = d + "|" + row.coach_id;
         coachCols.set(key, { startCol: cursor, laneCount });
@@ -338,7 +340,7 @@ export default function RotaBoard({
         cursor += laneCount;
       }
 
-      const unassigned = classes.filter((c) => c.day_of_week === d && c.coach_id === null);
+      const unassigned = group.unassigned;
       if (unassigned.length > 0) {
         const { lanes, laneCount } = laneAssign(unassigned);
         unassignedCols.set(d, { startCol: cursor, laneCount, lanes, classes: unassigned });
@@ -362,7 +364,7 @@ export default function RotaBoard({
       }
     }
 
-    return { cols, coachCols, lanesByCoach, unassignedCols, dayCols };
+    return { cols, coachCols, lanesByCoach, unassignedCols, dayCols, groups };
   }, [rosterByDay, classes]);
 
   // Close the coach popover on any outside click, as the mock did. The
@@ -403,6 +405,12 @@ export default function RotaBoard({
       target.coach_id === coachId &&
       target.start_mins === startMins
     ) {
+      return;
+    }
+    // An orphan (coach not rostered that day) already sits in this day's
+    // Unassigned column, so dropping it there anywhere changes nothing. Dropped
+    // on another day's Unassigned it moves and unassigns like any class.
+    if (coachId === null && target.day_of_week === day && isOrphan(target, current.roster)) {
       return;
     }
 
@@ -860,6 +868,14 @@ export default function RotaBoard({
     : pickerNotOnDay;
 
   const modalDayCoaches = modal ? rosterByDay[modal.day] : [];
+  // An orphan's coach isn't rostered on its day, so isn't in the list above.
+  // Listed anyway so the modal shows the stored value and saving keeps it.
+  const modalCoachExtra =
+    modal &&
+    modal.coachId !== UNASSIGNED &&
+    !modalDayCoaches.some((r) => r.coach_id === modal.coachId)
+      ? modal.coachId
+      : null;
   // Set coach lists the assignable coaches, plus whoever the class already
   // points at if they aren't one (moved, deactivated, or not a coach title),
   // so opening and saving the modal never silently changes the stored value.
@@ -895,16 +911,17 @@ export default function RotaBoard({
     };
   }
 
-  /** One class card. `flag` is the column's coach flag, if any. */
-  function renderCard(ev: ClassRow, flag: CoachFlag) {
-    const cover = isCover(ev);
+  /**
+   * One class card. `flag` is the column's coach flag, if any. `unassigned`:
+   * the card is in the Unassigned column, which also holds orphans, so the
+   * coach line comes from unassignedCoachLines and there's no COVER badge.
+   */
+  function renderCard(ev: ClassRow, flag: CoachFlag, unassigned: boolean) {
+    const cover = !unassigned && isCover(ev);
     const spanSlots = Math.max(1, Math.round(ev.duration_mins / SLOT_MIN));
-    const coachLine =
-      ev.coach_id === null
-        ? ev.set_coach_id
-          ? `Unassigned · for ${coachName(ev.set_coach_id)}`
-          : "No coach yet"
-        : `Coach: ${coachName(ev.coach_id)}`;
+    const coachLine = unassigned
+      ? unassignedCoachLines(ev, coachName)[0]
+      : `Coach: ${coachName(ev.coach_id)}`;
     return (
       <div
         key={ev.id}
@@ -984,7 +1001,7 @@ export default function RotaBoard({
       >
         {list
           .filter((ev) => (lanes.get(ev.id) ?? 0) === lane)
-          .map((ev) => renderCard(ev, flag))}
+          .map((ev) => renderCard(ev, flag, unassigned))}
       </div>
     ));
   }
@@ -1235,7 +1252,7 @@ export default function RotaBoard({
                     ci.startCol,
                     ci.laneCount,
                     layout.lanesByCoach.get(key)!,
-                    classes.filter((c) => c.day_of_week === d && c.coach_id === row.coach_id),
+                    layout.groups[d].byCoach.get(row.coach_id) ?? [],
                     directory.flag(row.coach_id)
                   );
                 })}
@@ -1591,6 +1608,11 @@ export default function RotaBoard({
                       {coachName(r.coach_id) + flagTag(directory.flag(r.coach_id))}
                     </option>
                   ))}
+                  {modalCoachExtra && (
+                    <option value={modalCoachExtra}>
+                      {coachName(modalCoachExtra) + " (not rostered)"}
+                    </option>
+                  )}
                   <option value={UNASSIGNED}>Unassigned</option>
                 </select>
               </div>

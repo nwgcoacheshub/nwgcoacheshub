@@ -49,6 +49,7 @@
 import { DAY_END, DAY_NAMES, DAY_START, laneAssign } from "./board";
 import type { ClassRow, RosterRow } from "@/components/rota/RotaBoard";
 import type { CoachFlag, RotaDirectory } from "./people";
+import { groupDay } from "./columns";
 
 /** Fixed. Extra height buys nothing: card type is capped by column width. */
 export const PAGE_H = 900;
@@ -358,7 +359,10 @@ export function planCard(
 export type PlannedCoach = {
   /** React key: the roster row id, or "unassigned-{day}". */
   key: string;
-  /** "unassigned" is the day's coach_id NULL column: no roster row behind it. */
+  /**
+   * "unassigned" is the day's Unassigned column (coach_id NULL and orphaned
+   * classes): no roster row behind it.
+   */
   kind: "coach" | "unassigned";
   rosterRow: RosterRow | null;
   coachId: string | null;
@@ -432,10 +436,9 @@ export function planExport(
 
   // First pass: lane counts, so the lane width is known before boxes are sized.
   const draft = rosterByDay.map((dayRoster, dayIndex) => {
+    const group = groupDay(dayIndex, dayRoster, classes);
     const coachesForDay = dayRoster.map((row) => {
-      const own = classes.filter(
-        (c) => c.day_of_week === dayIndex && c.coach_id === row.coach_id
-      );
+      const own = group.byCoach.get(row.coach_id) ?? [];
       for (const c of own) {
         if (!usedCategoryKeys.includes(c.category_key)) usedCategoryKeys.push(c.category_key);
       }
@@ -460,11 +463,9 @@ export function planExport(
       return { row, laneCount, lanes, classes: own, offShift };
     });
 
-    // Unassigned (coach_id NULL) classes get their own column after the
-    // coaches, as on the board. Nobody's shift, so nothing is shaded.
-    const unassignedClasses = classes.filter(
-      (c) => c.day_of_week === dayIndex && c.coach_id === null
-    );
+    // Unassigned (coach_id NULL) and orphaned classes get their own column
+    // after the coaches, as on the board. Nobody's shift, so nothing is shaded.
+    const unassignedClasses = group.unassigned;
     for (const c of unassignedClasses) {
       if (!usedCategoryKeys.includes(c.category_key)) usedCategoryKeys.push(c.category_key);
     }

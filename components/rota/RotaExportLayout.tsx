@@ -57,6 +57,7 @@ import {
   type PlannedCoach,
 } from "@/lib/rota/exportLayout";
 import { flagTag, type RotaDirectory } from "@/lib/rota/people";
+import { unassignedCoachLines } from "@/lib/rota/columns";
 import type { Category, ClassRow } from "./RotaBoard";
 
 /** Which week this is, or null for an undated board. */
@@ -543,6 +544,7 @@ function DayGrid({
                         plan={plan}
                         category={categoryByKey.get(ev.category_key)}
                         directory={directory}
+                        unassigned={coach.kind === "unassigned"}
                       />
                     ))}
                 </div>
@@ -570,15 +572,19 @@ function ClassCard({
   plan,
   category,
   directory,
+  unassigned,
 }: {
   ev: ClassRow;
   plan: ExportPlan;
   category: Category | undefined;
   directory: RotaDirectory;
+  /** In the Unassigned column, which also holds orphans: never a cover. */
+  unassigned: boolean;
 }) {
   const bg = category?.color_hex ?? "#9AA2AB";
   const fg = readableTextOn(bg);
-  const isCover = !!ev.coach_id && !!ev.set_coach_id && ev.set_coach_id !== ev.coach_id;
+  const isCover =
+    !unassigned && !!ev.coach_id && !!ev.set_coach_id && ev.set_coach_id !== ev.coach_id;
   const timeLabel = compactTimeRange(ev.start_mins, ev.duration_mins);
   const inner = cardInnerW(plan.laneW);
 
@@ -587,18 +593,17 @@ function ClassCard({
   // its own. Sized at the tier's ceiling because the coach line is what's being
   // chosen here, and planCard needs it before it can pick a size.
   //
-  // Unassigned (coach_id NULL) reads as on the board: "Unassigned · for
-  // {owner}" when there is one, falling back to "Unassigned" if that won't
-  // fit, otherwise "No coach yet".
+  // The Unassigned column (coach_id NULL and orphans) reads as on the board,
+  // taking the longest of unassignedCoachLines that fits: e.g. "Not rostered:
+  // X · for Y", then "Not rostered: X", then "Not rostered".
   const ceilingSub = plan.tier.cardTitle * 0.87;
   let coachLine: string;
-  if (ev.coach_id === null) {
-    coachLine = "No coach yet";
-    if (ev.set_coach_id) {
-      const owner = fitCoachName(directory.name(ev.set_coach_id), ceilingSub, inner);
-      const withOwner = `Unassigned · for ${owner}`;
-      coachLine = textWidth(withOwner, ceilingSub) <= inner ? withOwner : "Unassigned";
-    }
+  if (unassigned) {
+    const lines = unassignedCoachLines(ev, (id) =>
+      fitCoachName(directory.name(id), ceilingSub, inner)
+    );
+    coachLine =
+      lines.find((l) => textWidth(l, ceilingSub) <= inner) ?? lines[lines.length - 1];
   } else {
     const shortName = fitCoachName(directory.name(ev.coach_id), ceilingSub, inner);
     coachLine = shortName;
