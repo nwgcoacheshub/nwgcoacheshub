@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rota home – mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#F58220; --orange-soft:#FEF0E3; --orange-ink:#B85A0B;
+  --bg:#F3F4F6; --surface:#FFFFFF; --surface-2:#F9FAFB; --line:#E5E7EB; --line-strong:#D1D5DB;
+  --ink:#1F2937; --ink-2:#4B5563; --ink-3:#9CA3AF;
+  --ok:#15803D; --ok-bg:#E8F6EC; --chg:#1D4ED8; --chg-bg:#E8EFFD;
+  --bad:#B91C1C; --bad-bg:#FDECEC; --idle:#6B7280; --idle-bg:#F1F2F4;
+  --bar:#7FCB98; --bar-bad:#EF8E8E;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --orange-soft:#3A2614; --orange-ink:#FDB474;
+    --bg:#111418; --surface:#1A1E24; --surface-2:#20252C; --line:#2C323B; --line-strong:#3A414B;
+    --ink:#EEF0F3; --ink-2:#B3B9C2; --ink-3:#7C848F;
+    --ok:#5BD08A; --ok-bg:#16301F; --chg:#86A9FF; --chg-bg:#1A2540;
+    --bad:#FF8A8A; --bad-bg:#3A1A1A; --idle:#9AA1AB; --idle-bg:#262B32;
+    --bar:#2F7A4C; --bar-bad:#8F3A3A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --orange-soft:#3A2614; --orange-ink:#FDB474;
+  --bg:#111418; --surface:#1A1E24; --surface-2:#20252C; --line:#2C323B; --line-strong:#3A414B;
+  --ink:#EEF0F3; --ink-2:#B3B9C2; --ink-3:#7C848F;
+  --ok:#5BD08A; --ok-bg:#16301F; --chg:#86A9FF; --chg-bg:#1A2540;
+  --bad:#FF8A8A; --bad-bg:#3A1A1A; --idle:#9AA1AB; --idle-bg:#262B32;
+  --bar:#2F7A4C; --bar-bad:#8F3A3A;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:6px}
+
+/* mockup switcher */
+.mock{background:#2B2F36;color:#E5E7EB;font-size:12px;display:flex;gap:6px;align-items:center;padding:6px 16px;flex-wrap:wrap}
+.mock span{opacity:.7;margin-right:4px}
+.mock button{background:transparent;border:1px solid #4B5260;border-radius:999px;padding:3px 10px;color:#E5E7EB}
+.mock button[aria-pressed="true"]{background:var(--orange);border-color:var(--orange);color:#fff}
+
+/* hub chrome */
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:20px}
+.logo{font-weight:800;font-size:19px;white-space:nowrap}.logo b{color:var(--orange)}
+.search{flex:1;max-width:520px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:var(--ink-3);font-size:13px}
+.concern{margin-left:auto;background:var(--orange);color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px}
+.avatar{width:34px;height:34px;border-radius:50%;background:#F6A75F;color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+nav.main{max-width:1240px;margin:0 auto;padding:0 20px;display:flex;gap:26px;overflow-x:auto}
+nav.main a{padding:11px 0;color:var(--ink-2);font-weight:600;text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;font-size:14px}
+nav.main a.on{color:var(--orange);border-color:var(--orange)}
+
+main{max-width:1240px;margin:0 auto;padding:20px}
+.pagehead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:24px;margin:0;font-weight:800;letter-spacing:-.01em}
+select{font:inherit;font-weight:600;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 28px 6px 10px}
+.spacer{flex:1}
+.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--orange-ink)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* week strip — the centrepiece */
+.strip-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 14px 16px}
+.strip-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.strip-head h2{font-size:15px;margin:0}
+.strip-head .hint{color:var(--ink-3);font-size:12px}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(140px,1fr);gap:10px;overflow-x:auto;padding-bottom:2px;scroll-behavior:smooth}
+.addweek{border:1px dashed var(--line-strong);background:transparent;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--orange-ink);font-weight:700;font-size:14px;min-width:130px;padding:10px}
+.addweek:hover{border-color:var(--orange);background:var(--orange-soft)}
+.addweek span{font-size:11.5px;color:var(--ink-3);font-weight:500;text-align:center}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:18px;width:min(420px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog h3{margin:0 0 4px;font-size:17px}
+dialog .field{display:block;margin-top:14px;font-weight:600;font-size:13px}
+dialog .field select{display:block;width:100%;margin-top:5px}
+dialog fieldset{border:0;padding:0;margin:14px 0 0}
+dialog legend{font-weight:600;font-size:13px;padding:0;margin-bottom:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-top:6px;font-size:13px;cursor:pointer}
+.opt:has(input:checked){border-color:var(--orange);background:var(--orange-soft)}
+.opt input{accent-color:var(--orange);margin-top:3px}
+.opt small{display:block;color:var(--ink-2)}
+.opt select{margin-top:6px;font-size:12.5px;padding:4px 24px 4px 8px}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.week{position:relative;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 10px 9px;display:flex;flex-direction:column;gap:7px;min-width:130px}
+.week:hover{border-color:var(--line-strong)}
+.week[aria-pressed="true"]{background:var(--surface);border-color:var(--orange);box-shadow:0 0 0 1px var(--orange)}
+.week .when{font-size:11.5px;color:var(--ink-3);font-weight:600}
+.week .when.now{color:var(--orange-ink)}
+.week .range{font-weight:700;font-size:14px}
+.bars{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;align-items:end;height:34px}
+.bars i{display:block;background:var(--bar);border-radius:2px 2px 0 0;min-height:3px}
+.bars i.bad{background:var(--bar-bad)}
+.bars i.empty{background:transparent;border:1px dashed var(--line-strong);border-bottom:0;height:100%!important}
+.bars i.off{background:var(--line);height:3px!important}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:9.5px;color:var(--ink-3);text-align:center;margin-top:-4px}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap;align-self:flex-start}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-ok{color:var(--ok);background:var(--ok-bg)}
+.s-chg{color:var(--chg);background:var(--chg-bg)}
+.s-bad{color:var(--bad);background:var(--bad-bg)}
+.s-idle{color:var(--idle);background:var(--idle-bg)}
+
+.prev{margin-top:10px;font-size:12.5px}
+.prev summary{cursor:pointer;color:var(--ink-2);font-weight:600}
+.prev ul{list-style:none;margin:8px 0 0;padding:0;display:flex;gap:8px;flex-wrap:wrap}
+.prev li button{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12.5px}
+
+/* layout */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;margin-top:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{margin:0 0 4px;font-size:15px}
+.muted{color:var(--ink-2)}.faint{color:var(--ink-3)}
+.side{display:flex;flex-direction:column;gap:16px}
+
+/* selected week panel */
+.detail-head{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.detail-head h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.detail-head .sub{font-size:13px;color:var(--ink-2);margin-top:2px}
+.detail-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:14px 0}
+.stats div{background:var(--surface);padding:10px 12px}
+.stats b{display:block;font-size:20px;font-weight:700}
+.stats span{font-size:12px;color:var(--ink-2)}
+.stats .warn b{color:var(--bad)}
+.daylist{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.dayrow{display:grid;grid-template-columns:92px 1fr auto;gap:12px;align-items:center;padding:9px 12px;border-top:1px solid var(--line);font-size:13px}
+.dayrow:first-child{border-top:0}
+.dayrow .dn{font-weight:700}
+.dayrow .dn small{display:block;font-weight:500;color:var(--ink-3);font-size:11.5px}
+.coaches{display:flex;flex-wrap:wrap;gap:4px}
+.coach{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12px}
+.coach.cover{border-color:var(--chg);color:var(--chg)}
+.flag{font-size:12px;font-weight:600}
+.flag.bad{color:var(--bad)}.flag.chg{color:var(--chg)}
+.note{font-size:12.5px;padding:9px 12px;border-radius:8px;background:var(--orange-soft);color:var(--orange-ink);margin-top:12px}
+.empty-week{border:1px dashed var(--line-strong);border-radius:10px;padding:26px 18px;text-align:center}
+.empty-week p{margin:4px 0 14px}
+
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-top:1px solid var(--line)}
+.kv:first-of-type{border-top:0}
+.card .btn{margin-top:12px}
+.attn{list-style:none;margin:8px 0 0;padding:0}
+.attn li{display:flex;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid var(--line)}
+.attn li:first-child{border-top:0}
+.attn .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);margin-top:6px;flex:none}
+.attn button{background:none;border:0;padding:0;text-align:left;color:var(--ink)}
+.attn button:hover{text-decoration:underline}
+
+/* all sites */
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:11px 14px;text-align:left;border-top:1px solid var(--line);font-size:13px}
+thead th{border-top:0;font-size:12px;color:var(--ink-2);font-weight:600;background:var(--surface-2)}
+thead th.now{color:var(--orange-ink)}
+td.site{font-weight:700}
+td.site small{display:block;font-weight:500;color:var(--ink-3);font-size:11.5px}
+td button.chip{border:0}
+td button.chip:hover{filter:brightness(.96)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 2px 0;font-size:12px;color:var(--ink-2)}
+
+/* first-run */
+.setup{max-width:720px;margin:10px auto 0}
+.steps{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:10px}
+.steps li{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.steps .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--idle-bg);color:var(--idle);font-size:13px}
+.steps li.cur{border-color:var(--orange)}
+.steps li.cur .n{background:var(--orange);color:#fff}
+.steps h4{margin:0;font-size:14px}.steps p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.steps li.locked{opacity:.6}
+
+[hidden]{display:none!important}
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .search{display:none}
+  .dayrow{grid-template-columns:70px 1fr}
+  .dayrow .flag{grid-column:2}
+}
+@media (prefers-reduced-motion:no-preference){
+  .detail-body{animation:in .18s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+
+<div class="mock" role="group" aria-label="Mockup view">
+  <span>Mockup:</span>
+  <button data-view="site" aria-pressed="true">Site home (Burnley)</button>
+  <button data-view="all" aria-pressed="false">All sites (full-access roles)</button>
+  <button data-view="new" aria-pressed="false">New site, nothing built yet</button>
+</div>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="logo"><b>NWG</b> Coaches Hub</div>
+    <div class="search">Search how-tos, policies, quick links…</div>
+    <button class="concern">Report a concern</button>
+    <div class="avatar">JH</div>
+  </div>
+  <nav class="main">
+    <a href="#">Home</a><a href="#">Club Profile</a><a href="#">Gymnastics</a>
+    <a href="#" class="on">Operations</a><a href="#">People</a><a href="#">Admin</a><a href="#">Settings</a>
+  </nav>
+</header>
+
+<main>
+  <!-- SITE HOME -->
+  <section id="v-site">
+    <div class="pagehead">
+      <h1>Rota</h1>
+      <select id="siteSel" aria-label="Site"></select>
+      <div class="spacer"></div>
+      <button class="btn">Manage coaches</button>
+      <button class="btn">Export PDF</button>
+    </div>
+
+    <div class="strip-wrap">
+      <div class="strip-head">
+        <h2>Weeks</h2>
+        <span class="hint">Bars show classes per day, Monday to Sunday. Red means a class has no coach.</span>
+      </div>
+      <div class="strip" id="strip" role="group" aria-label="Choose a week"></div>
+      <details class="prev">
+        <summary>Previous weeks</summary>
+        <ul id="prevList"></ul>
+      </details>
+    </div>
+
+    <div class="grid">
+      <div class="card" id="detail"></div>
+      <aside class="side">
+        <div class="card">
+          <h3>Standard rota</h3>
+          <div class="faint" style="font-size:12.5px;margin-bottom:8px">The repeating template new weeks start from.</div>
+          <div class="kv"><span class="muted">Coaches</span><b>6</b></div>
+          <div class="kv"><span class="muted">Classes per week</span><b>31</b></div>
+          <div class="kv"><span class="muted">Last edited</span><b>14 Oct by Ellie</b></div>
+          <button class="btn">Edit standard rota</button>
+        </div>
+        <div class="card">
+          <h3>Needs attention</h3>
+          <ul class="attn" id="attn"></ul>
+        </div>
+        <div class="card">
+          <h3>Restructure</h3>
+          <div class="muted" style="font-size:13px">No restructure in progress. Use this to plan a new timetable without touching the live standard rota.</div>
+          <button class="btn">Start a restructure</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ALL SITES -->
+  <section id="v-all" hidden>
+    <div class="pagehead">
+      <h1>Rota</h1>
+      <span class="muted">All sites</span>
+      <div class="spacer"></div>
+      <button class="btn">Export all as PDF</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="allHead"></tr></thead>
+        <tbody id="allBody"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span class="chip s-ok">Ready</span><span class="chip s-chg">Changes from standard</span>
+      <span class="chip s-bad">Classes without a coach</span><span class="chip s-idle">Not created</span>
+      <span>Select any status to open that site and week.</span>
+    </div>
+  </section>
+
+  <!-- FIRST RUN -->
+  <section id="v-new" hidden>
+    <div class="pagehead">
+      <h1>Rota</h1>
+      <select aria-label="Site"><option>Mansfield</option></select>
+    </div>
+    <div class="setup">
+      <h2 style="margin:0;font-size:20px">Set up Mansfield’s rota</h2>
+      <p class="muted" style="margin:4px 0 0">Three steps. Once the standard rota is in place, each new week starts as a copy of it and you only change what’s different.</p>
+      <ol class="steps">
+        <li class="cur"><span class="n">1</span><div><h4>Add your coaches</h4><p>Everyone who works at Mansfield, linked to their hub account where they have one.</p></div><button class="btn primary">Add coaches</button></li>
+        <li class="locked"><span class="n">2</span><div><h4>Build the standard rota</h4><p>Your normal week: which classes run, when, and whose group each one is.</p></div><button class="btn" disabled>Build</button></li>
+        <li class="locked"><span class="n">3</span><div><h4>Start this week</h4><p>Copy the standard rota into the week of 19 October and adjust for absences or cover.</p></div><button class="btn" disabled>Start week</button></li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<dialog id="addDlg">
+  <form method="dialog">
+    <h3>Add a week</h3>
+    <div class="muted" style="font-size:13px">Burnley</div>
+    <label class="field">Week commencing
+      <select id="addWhen"></select>
+    </label>
+    <fieldset>
+      <legend>Start from</legend>
+      <label class="opt"><input type="radio" name="src" value="std" checked><div>Standard rota<small>Copy the 31 classes and coaches from the template.</small></div></label>
+      <label class="opt"><input type="radio" name="src" value="copy"><div>Copy another week<small>Useful for repeating a holiday or half-term pattern.</small><select id="addCopy" aria-label="Week to copy"></select></div></label>
+    </fieldset>
+    <div class="dlg-actions">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn primary" value="add">Add week</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const STD=[5,6,5,6,4,5,0];
+const STD_COACHES=[['Ellie','Sam','Priya'],['Ellie','Josh','Hannah'],['Sam','Priya','Tom'],['Ellie','Josh','Hannah'],['Sam','Tom'],['Ellie','Priya','Josh','Tom'],[]];
+const STATUS={ok:['s-ok','Ready'],chg:['s-chg','Changes from standard'],bad:['s-bad','Classes without a coach'],idle:['s-idle','Not created']};
+
+function wk(id,label,range,dates,status,opts={}){
+  const days=DAYS.map((d,i)=>({d,date:dates[i],classes:status==='idle'?0:(opts.classes?.[i]??STD[i]),
+    coaches:status==='idle'?[]:(opts.coaches?.[i]??STD_COACHES[i]),covers:opts.covers?.[i]||[],uncovered:opts.uncovered?.[i]||0}));
+  return {id,label,range,status,days,note:opts.note};
+}
+const d=(start,month,days)=>Array.from({length:7},(_,i)=>{const n=start+i;return n>days?`${n-days} ${month[1]}`:`${n} ${month[0]}`});
+
+const weeks=[
+  wk('2026-10-19','This week','19–25 Oct',d(19,['Oct','Nov'],31),'chg',{
+    coaches:{1:['Ellie','Josh','Sam'],3:['Ellie','Josh','Hannah']},covers:{1:['Sam']}}),
+  wk('2026-10-26','Next week','26 Oct – 1 Nov',d(26,['Oct','Nov'],31),'bad',{
+    classes:[3,3,3,3,3,6,0],coaches:{0:['Ellie','Sam'],1:['Josh','Hannah'],2:['Priya','Tom'],3:['Ellie'],4:['Sam','Tom']},uncovered:{3:1},
+    note:'Half-term week: holiday camp timetable, weekday classes reduced.'}),
+  wk('2026-11-02','In 2 weeks','2–8 Nov',d(2,['Nov','Nov'],30),'ok'),
+  wk('2026-11-09','In 3 weeks','9–15 Nov',d(9,['Nov','Nov'],30),'bad',{coaches:{3:['Ellie']},uncovered:{3:2}}),
+];
+const prev=[['2026-10-12','12–18 Oct'],['2026-10-05','5–11 Oct'],['2026-09-28','28 Sep – 4 Oct']];
+let selected='2026-10-19';
+
+const el=(h)=>{const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstChild};
+const chip=s=>`<span class="chip ${STATUS[s][0]}">${STATUS[s][1]}</span>`;
+
+function renderStrip(){
+  const max=6,strip=document.getElementById('strip');strip.innerHTML='';
+  weeks.forEach(w=>{
+    const bars=w.days.map(x=>{
+      if(w.status==='idle')return x.d==='Sun'?'<i class="off"></i>':'<i class="empty"></i>';
+      if(!x.classes)return '<i class="off"></i>';
+      return `<i class="${x.uncovered?'bad':''}" style="height:${Math.round(x.classes/max*100)}%"></i>`;
+    }).join('');
+    const b=el(`<button class="week" aria-pressed="${w.id===selected}">
+      <span class="when ${w.label==='This week'?'now':''}">${w.label}</span>
+      <span class="range">${w.range}</span>
+      <span class="bars" aria-hidden="true">${bars}</span>
+      <span class="days" aria-hidden="true">${DAYS.map(x=>`<span>${x[0]}</span>`).join('')}</span>
+      ${chip(w.status)}</button>`);
+    b.onclick=()=>{selected=w.id;renderStrip();renderDetail()};
+    strip.appendChild(b);
+  });
+  const add=el(`<button class="addweek">+ Add week<span>Plan further ahead, or copy a week that’s already built</span></button>`);
+  add.onclick=openAdd;
+  strip.appendChild(add);
+}
+
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const BASE=Date.UTC(2026,9,19);
+function weekInfo(iso){
+  const s=new Date(iso+'T00:00:00Z'),dates=[];
+  for(let i=0;i<7;i++){const x=new Date(s.getTime()+i*864e5);dates.push(`${x.getUTCDate()} ${MONTHS[x.getUTCMonth()]}`)}
+  const e=new Date(s.getTime()+6*864e5);
+  const range=s.getUTCMonth()===e.getUTCMonth()?`${s.getUTCDate()}–${e.getUTCDate()} ${MONTHS[e.getUTCMonth()]}`:`${dates[0]} – ${dates[6]}`;
+  const n=Math.round((s.getTime()-BASE)/(7*864e5));
+  return {dates,range,label:n===0?'This week':n===1?'Next week':`In ${n} weeks`};
+}
+function openAdd(pre){
+  const have=new Set(weeks.map(w=>w.id)),opts=[];
+  for(let i=0;i<=16&&opts.length<10;i++){
+    const x=new Date(BASE+i*7*864e5),iso=x.toISOString().slice(0,10);
+    if(!have.has(iso))opts.push(`<option value="${iso}">${weekInfo(iso).range} (${weekInfo(iso).label.toLowerCase()})</option>`);
+  }
+  document.getElementById('addWhen').innerHTML=opts.join('');
+  if(typeof pre==='string')document.getElementById('addWhen').value=pre;
+  document.getElementById('addCopy').innerHTML=weeks.filter(w=>w.status!=='idle').map(w=>`<option value="${w.id}">${w.range}${w.note?' (half term)':''}</option>`).join('');
+  document.getElementById('addDlg').showModal();
+}
+document.getElementById('addCopy').addEventListener('focus',()=>{document.querySelector('input[name=src][value=copy]').checked=true});
+document.getElementById('addDlg').addEventListener('close',e=>{
+  const dlg=e.target;if(dlg.returnValue!=='add')return;
+  const iso=document.getElementById('addWhen').value;if(!iso)return;
+  const info=weekInfo(iso),src=document.querySelector('input[name=src]:checked').value;
+  let w;
+  if(src==='copy'){
+    const from=weeks.find(x=>x.id===document.getElementById('addCopy').value);
+    w={id:iso,label:info.label,range:info.range,status:from.status,note:from.note?`Copied from ${from.range}. ${from.note}`:`Copied from ${from.range}.`,
+      days:from.days.map((x,i)=>({...x,date:info.dates[i],coaches:[...x.coaches],covers:[...x.covers]}))};
+  }else w=wk(iso,info.label,info.range,info.dates,'ok');
+  weeks.push(w);weeks.sort((a,b)=>a.id.localeCompare(b.id));
+  selected=iso;renderStrip();renderDetail();renderAttn();
+  const strip=document.getElementById('strip'),card=strip.querySelector('.week[aria-pressed="true"]');
+  if(card)card.scrollIntoView({block:'nearest',inline:'center'});
+});
+
+function renderDetail(){
+  const w=weeks.find(x=>x.id===selected),box=document.getElementById('detail');
+  const total=w.days.reduce((a,x)=>a+x.classes,0),unc=w.days.reduce((a,x)=>a+x.uncovered,0),
+    cov=w.days.reduce((a,x)=>a+x.covers.length,0),coaches=new Set(w.days.flatMap(x=>x.coaches)).size;
+  const head=`<div class="detail-head"><div><div class="faint" style="font-size:12px;font-weight:600">${w.label}</div>
+    <h2>Week of ${w.range}</h2><div class="sub">${chip(w.status)}</div></div>
+    <div class="detail-actions">${w.status==='idle'
+      ?'<button class="btn primary">Start from standard rota</button><button class="btn">Start blank</button>'
+      :'<button class="btn">Export week</button><button class="btn primary">Open week</button>'}</div></div>`;
+  if(w.status==='idle'){
+    box.innerHTML=head+`<div class="detail-body"><div class="empty-week" style="margin-top:14px"><h3>This week hasn’t been set up</h3>
+      <p class="muted">Start from the standard rota to copy its ${STD.reduce((a,b)=>a+b)} classes and coaches, then change anything that’s different that week.</p>
+      <button class="btn primary">Start from standard rota</button></div></div>`;return;
+  }
+  const rows=w.days.map(x=>{
+    if(!x.classes)return `<div class="dayrow"><div class="dn">${x.d}<small>${x.date}</small></div><div class="faint">No classes</div><span></span></div>`;
+    const c=x.coaches.map(n=>`<span class="coach ${x.covers.includes(n)?'cover':''}">${n}${x.covers.includes(n)?' (cover)':''}</span>`).join('');
+    const f=x.uncovered?`<span class="flag bad">${x.uncovered} without a coach</span>`:x.covers.length?`<span class="flag chg">${x.covers.length} covered</span>`:'';
+    return `<div class="dayrow"><div class="dn">${x.d}<small>${x.date}</small></div><div><div class="coaches">${c}</div>
+      <div class="faint" style="font-size:12px;margin-top:3px">${x.classes} classes</div></div>${f||'<span></span>'}</div>`;
+  }).join('');
+  box.innerHTML=head+`<div class="detail-body">${w.note?`<div class="note">${w.note}</div>`:''}
+    <div class="stats"><div><b>${coaches}</b><span>Coaches working</span></div><div><b>${total}</b><span>Classes</span></div>
+    <div><b>${cov}</b><span>Covered by another coach</span></div><div class="${unc?'warn':''}"><b>${unc}</b><span>Without a coach</span></div></div>
+    <div class="daylist">${rows}</div></div>`;
+}
+
+function renderAttn(){
+  const items=[];
+  weeks.forEach(w=>w.days.forEach(x=>{if(x.uncovered)items.push([w.id,`${x.uncovered} class${x.uncovered>1?'es':''} without a coach, ${x.d} ${x.date}`])}));
+  const ul=document.getElementById('attn');ul.innerHTML='';
+  items.forEach(([id,t])=>{const li=el(`<li><span class="dot"></span><button>${t}</button></li>`);
+    li.querySelector('button').onclick=()=>{selected=id;renderStrip();renderDetail();document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'start'})};ul.appendChild(li)});
+}
+
+function renderPrev(){
+  const ul=document.getElementById('prevList');
+  prev.forEach(([id,r])=>ul.appendChild(el(`<li><button>${r}</button></li>`)));
+}
+
+const SITES=['Burnley','Coventry','Leeds','Mansfield','Rotherham','Wirral','Wolverhampton'];
+const ALL={Burnley:['chg','bad','ok','bad'],Coventry:['ok','ok','chg','idle'],Leeds:['chg','chg','ok','ok'],
+  Mansfield:['idle','idle','idle','idle'],Rotherham:['ok','bad','idle','idle'],Wirral:['ok','ok','ok','idle'],Wolverhampton:['bad','chg','idle','idle']};
+const COACHN={Burnley:6,Coventry:8,Leeds:11,Mansfield:0,Rotherham:5,Wirral:7,Wolverhampton:9};
+function renderAll(){
+  document.getElementById('allHead').innerHTML='<th>Site</th>'+weeks.slice(0,4).map((w,i)=>`<th class="${i?'':'now'}">${w.label}<br><span style="font-weight:500">${w.range}</span></th>`).join('');
+  const tb=document.getElementById('allBody');
+  SITES.forEach(s=>{
+    const tr=el(`<tr><td class="site">${s}<small>${COACHN[s]?COACHN[s]+' coaches':'Not set up'}</small></td>${ALL[s].map((st,i)=>`<td><button class="chip ${STATUS[st][0]}" data-i="${i}">${STATUS[st][1]}</button></td>`).join('')}</tr>`);
+    tr.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+      if(s==='Mansfield'){show('new');return}
+      if(b.classList.contains('s-idle')){document.getElementById('siteSel').value=s;show('site');openAdd();return}
+      document.getElementById('siteSel').value=s;selected=weeks[+b.dataset.i].id;renderStrip();renderDetail();show('site')});
+    tb.appendChild(tr);
+  });
+}
+
+function show(v){
+  ['site','all','new'].forEach(x=>document.getElementById('v-'+x).hidden=x!==v);
+  document.querySelectorAll('.mock button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v));
+}
+document.querySelectorAll('.mock button').forEach(b=>b.onclick=()=>show(b.dataset.view));
+
+document.getElementById('siteSel').innerHTML=SITES.map(s=>`<option ${s==='Burnley'?'selected':''}>${s}</option>`).join('');
+renderStrip();renderDetail();renderAttn();renderPrev();renderAll();
+</script>
+</body>
+</html>
