@@ -19,7 +19,8 @@ export type Capability =
   | "edit_rota"
   | "manage_club_meetings"
   | "manage_club_updates"
-  | "manage_club_roles";
+  | "manage_club_roles"
+  | "manage_comp_events";
 
 export type Capabilities = {
   caps: ReadonlySet<Capability>;

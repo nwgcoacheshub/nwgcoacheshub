@@ -219,7 +219,7 @@ Since migrations 0026 (database) and 0027 + P4 (app), permissions come from
 
 | Capability | Held by |
 |---|---|
-| `view_all_sites`, `all_sites_scope`, `publish_whats_new`, `manage_policies`, `manage_users` | Regional General Manager, Head of Gymnastics, Head of Operations |
+| `view_all_sites`, `all_sites_scope`, `publish_whats_new`, `manage_policies`, `manage_users`, `manage_comp_events` | Regional General Manager, Head of Gymnastics, Head of Operations |
 | `edit_rota`, `manage_club_meetings`, `manage_club_updates` (site-scoped) | Lead Coach, Club Head Coach + the three above |
 | `manage_club_roles` (site-scoped) | Club Head Coach + the three above |
 
@@ -279,6 +279,30 @@ created in Admin › Users.
 - **App side.** `lib/rota/people.ts` turns both into one lookup (`makeDirectory`). Display names
   are first name + last initial ("Beth H"), or the full name where two people would share one.
   `resolve_profile_names()` is not used for rota or attendee names.
+
+### Competition calendar data model
+Since migration 0031. One shared events table that every Competitions page writes to and
+the Competition Calendar reads.
+
+- **`comp_events`** — one row per competition: `title` (1–200 chars), `event_type` (exactly
+  one of `'NWG All Competition'`, `'NWG Club Competition'`, `'Invitational Competition'`,
+  `'Regional/National Competition'`), `start_date` / `end_date` (`date`, end ≥ start),
+  optional `venue`, `organiser`, `link`, `notes`, `source` (`'external'` | `'club'` |
+  `'nwg'`, default `'external'`: which Competitions page created it), `created_by` →
+  `profiles(id)` ON DELETE SET NULL (default `auth.uid()`), `created_at`, `updated_at`
+  (client-set on edit, no trigger). `'NWG All Competition'` means every site attends; the
+  app derives that from `event_type` (there is no all-sites flag). Duplicates (same title +
+  start date) are warned about in the app, not blocked; a non-unique
+  `(lower(title), start_date)` index supports the check.
+- **`comp_event_sites`** — `(event_id, site_id)` PK; `event_id` → `comp_events` ON DELETE
+  CASCADE, `site_id` → `rota_sites(id)` ON DELETE RESTRICT. Insert/delete only (no update
+  policy). Head Office has no `rota_sites` row, so it can't be attached.
+- **Access.** Every active user reads every event and event site. Any active user may create
+  external events only, as themselves (`created_by = auth.uid()`, `source = 'external'`,
+  `event_type` `'Invitational Competition'` or `'Regional/National Competition'`), and may
+  attach or detach their own site on external events only. `manage_comp_events` holders may
+  create (still as themselves), edit and delete any event, and attach or detach any site on
+  any event.
 
 ### Seed row (include in the initial migration)
 Historical: this is what 0001 inserted. `role` was dropped in 0028, so it no longer runs as
