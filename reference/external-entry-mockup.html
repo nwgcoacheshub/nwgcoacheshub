@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>External Entry — mockup</title>
+<style>
+:root{
+  --orange:#F58220;--orange-dark:#D9690B;--orange-tint:#FEF0E3;
+  --ink:#1F2933;--slate:#52606D;--slate-light:#9AA5B1;--line:#E4E7EB;--bg:#F5F6F8;--card:#fff;
+  --green:#2E9E5B;--green-t:#E6F5EC;--amber:#B07C0C;--amber-dot:#E0A11B;--amber-t:#FCF3DD;
+  --red:#C0362C;--red-t:#FDECEA;--grey:#9AA2AB;--grey-t:#EEF0F2;--t-reg:#5146A8;--t-reg-t:#ECEAF8;
+  --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+.nav{background:#fff;border-bottom:1px solid var(--line);height:52px;display:flex;align-items:center;gap:22px;padding:0 20px;font-size:13px;color:var(--slate);overflow-x:auto;white-space:nowrap}
+.nav b{color:var(--orange);font-size:15px;margin-right:8px}
+.nav .on{color:var(--ink);font-weight:600;border-bottom:2px solid var(--orange);padding:15px 0 13px}
+.mock{background:#FFF8E6;border-bottom:1px solid #F3E0B0;font-size:12px;color:#7A5A00;padding:8px 20px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.mock select{font-size:12px;padding:3px 6px;border:1px solid #E6CF95;border-radius:6px;background:#fff}
+.wrap{max-width:1280px;margin:0 auto;padding:18px 16px 60px}
+.crumb{font-size:12px;color:var(--slate-light);margin-bottom:6px}.crumb b{color:var(--slate)}
+h1{font-size:22px;margin:0}
+.head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.sub{color:var(--slate);font-size:13px;margin-top:3px}
+.pill{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;display:inline-block}
+.sitebadge{background:var(--ink);color:#fff}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.dot.red{background:var(--red)}.dot.amber{background:var(--amber-dot)}.dot.green{background:var(--green)}.dot.grey{background:var(--grey)}
+.status{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px}
+.stage{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:var(--grey-t);color:var(--slate)}
+.stage.hot{background:var(--red-t);color:var(--red)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px}
+.card>h3{margin:0;font-size:14px;padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card>h3 small{font-weight:400;color:var(--slate);font-size:12px}
+.cb{padding:12px 16px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+@media (max-width:980px){.cols{grid-template-columns:minmax(0,1fr)}}
+td.nm{white-space:nowrap}
+/* stepper */
+.steps{display:flex;gap:0;overflow-x:auto;padding:14px 16px}
+.step{flex:1;min-width:110px;position:relative;padding-top:22px;font-size:11.5px;color:var(--slate-light)}
+.step:before{content:"";position:absolute;top:8px;left:0;right:0;height:2px;background:var(--line)}
+.step:first-child:before{left:50%}.step:last-child:before{right:50%}
+.step i{position:absolute;top:1px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--line);font-style:normal;font-size:10px;line-height:12px;text-align:center;color:#fff}
+.step div{text-align:center}
+.step .who{font-size:10.5px;color:var(--slate-light)}
+.step.done{color:var(--slate)}.step.done:before{background:var(--green)}.step.done i{background:var(--green);border-color:var(--green)}
+.step.cur{color:var(--ink);font-weight:700}.step.cur i{border-color:var(--orange);background:var(--orange);box-shadow:0 0 0 4px var(--orange-tint)}
+/* next step */
+.next{border:2px solid var(--orange);background:linear-gradient(0deg,#fff,#fff)}
+.next.wait{border-color:var(--red)}
+.next .cb{display:flex;flex-direction:column;gap:10px}
+.next .title{font-weight:700;font-size:15px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+.btn.danger{color:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lock{font-size:12px;color:var(--slate);background:var(--bg);border-radius:8px;padding:7px 10px}
+.warn{font-size:12.5px;border-radius:8px;padding:8px 10px;background:var(--amber-t);color:var(--amber)}
+.err{font-size:12.5px;border-radius:8px;padding:8px 10px;background:var(--red-t);color:var(--red)}
+.ok{font-size:12.5px;border-radius:8px;padding:8px 10px;background:var(--green-t);color:var(--green)}
+pre.sum{margin:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:12.5px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+input[type=text],input[type=date],select.f,textarea{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font:inherit;font-size:13px}
+.prog{height:8px;background:var(--grey-t);border-radius:999px;overflow:hidden}.prog b{display:block;height:100%;background:var(--green)}
+/* details */
+dl.meta{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:0;font-size:13px}
+dl.meta dt{color:var(--slate-light)}dl.meta dd{margin:0}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-weight:600;color:var(--slate);font-size:11.5px;padding:7px 8px;border-bottom:1px solid var(--line);background:#FAFBFC;white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.c,th.c{text-align:center}td.n,th.n{text-align:right;white-space:nowrap}
+tr.wd td{color:var(--slate-light)}tr.wd td.nm{text-decoration:line-through}
+tr.wd td.note{text-decoration:none;color:var(--slate);font-style:italic}
+tr.flag td{background:#FFFBF0}
+.tbl{overflow-x:auto}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer}
+input[type=checkbox]:disabled{cursor:not-allowed}
+.tfoot td{font-weight:700;background:#FAFBFC}
+.muted{color:var(--slate-light)}
+.kebab{border:0;background:none;color:var(--slate);cursor:pointer;font-size:16px;padding:0 4px}
+.person{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.person:last-child{border-bottom:0}
+.av{width:28px;height:28px;border-radius:50%;background:var(--orange-tint);color:var(--orange-dark);font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.person .nm{font-weight:600}.person .s{font-size:12px;color:var(--slate)}
+.jst{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px}
+.jst.pend{background:var(--amber-t);color:var(--amber)}.jst.ok{background:var(--green-t);color:var(--green)}
+.money div{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.money .tot{border-top:1px solid var(--line);margin-top:4px;padding-top:8px;font-weight:700}
+.reasons{margin:0;padding-left:16px;font-size:12.5px}
+.reasons li{margin:3px 0}.reasons .r{color:var(--red)}.reasons .a{color:var(--amber)}.reasons .m{color:var(--amber)}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:6px 0;font-size:12.5px;position:relative}
+.tl li:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--line);margin-top:5px}
+.tl li.k:before{background:var(--orange)}
+.tl .w{color:var(--slate-light);font-size:11.5px}
+.tl .w b{color:var(--slate);font-weight:600}
+.feelv td input{width:80px}
+.hidden{display:none!important}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="nav"><b>NWG Coaches Hub</b><span>Home</span><span>Club Profile ▾</span><span>Gymnastics ▾</span><span class="on">Competitions ▾</span><span>Operations ▾</span><span>People ▾</span><span>Settings</span></div>
+<div class="mock">
+  <b>MOCKUP — External Entry detail.</b>
+  <label>Preview stage <select id="selStage"></select></label>
+  <label>Viewing as <select id="selRole">
+    <option value="hog">Jamie Harrison — Head of Gymnastics</option>
+    <option value="rgm">RGM (Head Office)</option>
+    <option value="chc">Club Head Coach — Leeds</option>
+    <option value="coach">Amy Peacock — Coach, Leeds</option>
+  </select></label>
+  <span>Fictional gymnast names. Dates move forward with the stage.</span>
+</div>
+
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STAGES=[
+ {k:"draft",l:"Draft",today:"6 Nov 2026"},
+ {k:"signoff",l:"Awaiting sign-off",today:"6 Nov 2026"},
+ {k:"collect",l:"Collecting payments",today:"9 Nov 2026"},
+ {k:"ready",l:"Ready for PO",today:"11 Nov 2026"},
+ {k:"posent",l:"PO requested",today:"17 Nov 2026"},
+ {k:"porec",l:"PO received",today:"26 Nov 2026"},
+ {k:"entered",l:"Entered",today:"28 Nov 2026"},
+ {k:"done",l:"Completed",today:"7 Dec 2026"},
+];
+const STEPS=[["Draft","Created"],["Sign-off","HOG"],["Payments","Parents pay"],["PO request","Email Finance"],["PO received","PO number"],["Entered","With organiser"],["Completed",""]];
+const stepIdx=[0,1,2,3,3,4,5,6]; // stage -> step index (ready & posent share step 3)
+const FEES={Opal:24,Crystal:24,Diamond:28};const UP=0.20;const TSHIRT=10;
+const G=[
+ {n:"Amelia Hart",dob:"12/03/2015",lv:"Opal",ts:true},
+ {n:"Poppy Shaw",dob:"02/09/2014",lv:"Crystal"},
+ {n:"Isla Morgan",dob:"20/06/2013",lv:"Diamond",ts:true},
+ {n:"Grace Patel",dob:"30/11/2015",lv:"Opal"},
+ {n:"Ruby Clarke",dob:"15/01/2014",lv:"Crystal",cr:6},
+ {n:"Evie Turner",dob:"08/08/2013",lv:"Diamond"},
+ {n:"Lily Brooks",dob:"21/05/2015",lv:"Opal"},
+ {n:"Mia Daniels",dob:"03/12/2014",lv:"Crystal"},
+ {n:"Sofia Reid",dob:"17/04/2013",lv:"Diamond",wd:"Injury — refunded as BARS credit £33.60 (Amy Peacock, 9 Nov)"},
+];
+const price=g=>+(FEES[g.lv]*(1+UP)+(g.ts?TSHIRT:0)).toFixed(2);
+const gbp=v=>"£"+v.toFixed(2);
+let st=1, role="hog";
+const can={
+  signoff:()=>role==="hog",
+  approveJudge:()=>role==="hog"||role==="rgm",
+  confirmPrice:()=>role==="hog"||role==="chc",
+  removeData:()=>role==="hog"||role==="rgm",
+};
+selStage.innerHTML=STAGES.map((s,i)=>`<option value="${i}">${i+1}. ${s.l}</option>`).join("");selStage.value=st;
+selStage.onchange=()=>{st=+selStage.value;render()};selRole.onchange=()=>{role=selRole.value;render()};
+function toast(t){toast.el=document.getElementById("toast");toast.el.textContent=t;toast.el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>toast.el.classList.remove("on"),1800)}
+
+function gstate(g,i){ // payment state by stage
+  const s=STAGES[st].k;
+  if(g.wd) return st>=2?{wd:true,debt:true,paid:false,bars:false}:{debt:false,paid:false,bars:false};
+  if(st<2) return {debt:false,paid:false,bars:false};
+  if(s==="collect"){
+    if(g.n==="Lily Brooks")return{debt:true,paid:false,bars:false};
+    if(g.n==="Mia Daniels")return{debt:true,paid:false,bars:false};
+    if(g.n==="Grace Patel")return{debt:true,paid:true,bars:false,date:"7 Nov"};
+    return{debt:true,paid:true,bars:true,date:["2 Nov","3 Nov","4 Nov","5 Nov"][i%4]};
+  }
+  return{debt:true,paid:true,bars:true,date:["2 Nov","3 Nov","4 Nov","5 Nov","10 Nov"][i%5]};
+}
+const LOG=[
+ [0,"Created entry","Amy Peacock","28 Oct 10:14"],
+ [0,"Added 9 gymnasts","Amy Peacock","28 Oct 10:31"],
+ [0,"Set fee levels: Opal £24, Crystal £24, Diamond £28; extra: T-shirt £10","Amy Peacock","28 Oct 10:33"],
+ [0,"Added coach Melissa Moxon","Amy Peacock","28 Oct 10:35"],
+ [0,"Added judge Amy Peacock (pending approval)","Amy Peacock","28 Oct 10:36"],
+ [1,"Requested sign-off","Amy Peacock","30 Oct 16:02",1],
+ [2,"Confirmed parent prices (20% uplift)","Jamie Harrison","6 Nov 09:12"],
+ [2,"Signed off competition request","Jamie Harrison","6 Nov 09:13",1],
+ [2,"Approved judge Amy Peacock","Jamie Harrison","6 Nov 09:14"],
+ [2,"Ticked debt added on BARS for 9 gymnasts","Amy Peacock","6 Nov 11:20"],
+ [2,"Marked paid: Ruby Clarke £22.80 (+£6.00 credit)","Amy Peacock","7 Nov 18:40"],
+ [2,"Withdrew Sofia Reid — note: injury, refunded as BARS credit","Amy Peacock","9 Nov 08:55"],
+ [3,"All gymnasts paid and marked paid on BARS — Ready for PO","System","10 Nov 19:02",1],
+ [4,"Ticked “PO request emailed to Finance”","Amy Peacock","11 Nov 09:20",1],
+ [5,"Recorded PO number PO-2026-0412","Amy Peacock","18 Nov 14:05",1],
+ [6,"Marked entered with organiser","Amy Peacock","27 Nov 10:00",1],
+ [6,"Marked organiser paid","Amy Peacock","27 Nov 10:02"],
+ [7,"Marked completed","Amy Peacock","6 Dec 17:30",1],
+];
+const HEALTH=[
+ {h:"red",w:"Co-ordinator",r:[["r","PO was due by 3 Nov (entry deadline 1 Dec − 28 days) — request sign-off now"]],m:["Fee level not set for 1 gymnast"]},
+ {h:"red",w:"HOG",r:[["r","Sign-off outstanding — PO was due by 3 Nov"],["a","Late notice: the PO request will be under 4 weeks before the entry deadline"]],m:[]},
+ {h:"red",w:"Co-ordinator",r:[["r","2 of 8 gymnasts unpaid — collect-by date 3 Nov has passed"]],m:["Grace Patel paid but not marked paid on BARS"]},
+ {h:"amber",w:"Co-ordinator",r:[["a","Send the PO request to Finance today — 20 days to entry deadline (policy: 28)"]],m:[]},
+ {h:"amber",w:"Finance (PO number)",r:[["a","PO request emailed 11 Nov — 4 working days, no PO number yet"]],m:[]},
+ {h:"amber",w:"Co-ordinator",r:[["a","Entry deadline 1 Dec in 5 days — not yet entered with organiser"]],m:[]},
+ {h:"green",w:"—",r:[["","Entered 27 Nov · organiser paid · 1 of 1 judge approved"]],m:[]},
+ {h:"grey",w:"—",r:[["","Completed 6 Dec"]],m:[]},
+];
+
+function stepper(){
+  const cur=stepIdx[st];
+  const who={0:"Amy · 28 Oct",1:"Jamie · 6 Nov",2:"10 Nov",3:"Amy · 11 Nov",4:"Amy · 18 Nov",5:"Amy · 27 Nov",6:"6 Dec"};
+  return `<div class="card"><div class="steps">${STEPS.map((s,i)=>{const c=i<cur||(STAGES[st].k==="done")?"done":i===cur?"cur":"";const showWho=i<cur||STAGES[st].k==="done"||(i===3&&STAGES[st].k==="posent");
+    return `<div class="step ${c}"><i>${c==="done"?"✓":""}</i><div>${s[0]}</div><div class="who">${showWho?who[i]:s[1]}</div></div>`}).join("")}</div></div>`;
+}
+function summaryText(n,cost){return `Competition Entry Payment – PO Request
+Club: Leeds
+Competition: Yorkshire Opal, Crystal, Diamond
+Competition date: Sat 5 Dec 2026
+Entry deadline: Tue 1 Dec 2026
+Payment deadline: Tue 1 Dec 2026
+Estimated total entry cost: ${gbp(cost)}
+Number of gymnasts to be entered: ${n}
+All entry fees collected and marked paid on BARS: Yes (${n}/${n})
+HOG sign-off: Jamie Harrison, 6 Nov 2026
+LATE NOTICE: under 4 weeks to the entry deadline (20 days)
+Signed: Amy Peacock`}
+function nextStep(n,cost){
+  const k=STAGES[st].k;
+  if(k==="draft")return `<div class="card next"><h3>Next step: request sign-off <small>Anyone at Leeds</small></h3><div class="cb">
+    <div>Check the gymnast list, fee levels and staff, then send it to the Head of Gymnastics. Nothing else unlocks until it's signed off.</div>
+    <div class="err">Before you can request sign-off: set a fee level for every gymnast (1 missing).</div>
+    <div class="row"><button class="btn primary" disabled>Request sign-off</button><span class="muted" style="font-size:12px">Disabled until the missing item is fixed</span></div></div></div>`;
+  if(k==="signoff"){
+    if(can.signoff())return `<div class="card next wait"><h3>Awaiting your sign-off <small>Requested by Amy Peacock · 30 Oct</small></h3><div class="cb">
+      <div class="warn">⚠ Late notice — the PO request will be <b>under 4 weeks</b> before the 1 Dec entry deadline (policy minimum 2 weeks). Signing off confirms you accept this.</div>
+      <div>9 gymnasts · organiser fees ${gbp(cost)} · 1 coach · 1 judge (pending RGM/HOG approval)</div>
+      <label class="row" style="font-size:13px"><input type="checkbox" id="ackLate"> I acknowledge the late notice</label>
+      <textarea placeholder="Note (optional — required if declining)" rows="2"></textarea>
+      <div class="row"><button class="btn primary" onclick="toast('Signed off — logged as Jamie Harrison')">Sign off</button><button class="btn danger" onclick="toast('Declined — note required')">Decline</button></div></div></div>`;
+    return `<div class="card next wait"><h3>Awaiting sign-off from Head of Gymnastics <small>Requested by Amy Peacock · 30 Oct</small></h3><div class="cb">
+      <div class="lock">🔒 Only the Head of Gymnastics can sign off competition requests. Payments and PO steps unlock once it's signed off. You can still edit gymnasts and staff.</div></div></div>`;
+  }
+  if(k==="collect")return `<div class="card next"><h3>Next step: collect parent payments <small>Collect by 3 Nov (passed)</small></h3><div class="cb">
+    <div class="row" style="justify-content:space-between"><span><b>6 of 8</b> paid and marked on BARS</span><span class="muted">1 withdrawn</span></div>
+    <div class="prog"><b style="width:75%"></b></div>
+    <div class="err">Unpaid: Lily Brooks, Mia Daniels · Paid but not marked on BARS: Grace Patel</div>
+    <div class="muted" style="font-size:12.5px">When every active gymnast has debt added, paid and marked paid on BARS, this entry moves to <b>Ready for PO</b> automatically.</div></div></div>`;
+  if(k==="ready")return `<div class="card next"><h3>Next step: email Finance for a PO <small>Do this yourself — the Hub doesn't send emails</small></h3><div class="cb">
+    <div class="warn">⚠ Late notice — mention it in your email (20 days to the entry deadline).</div>
+    <pre class="sum" id="sum">${summaryText(n,cost)}</pre>
+    <div class="row"><button class="btn" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('sum').textContent);toast('Summary copied')">📋 Copy summary</button>
+      <a class="btn" href="mailto:luke@nilewilsongymnastics.com,karnika@nwga.co.uk?subject=${encodeURIComponent("Competition Entry Payment – PO Request – Leeds – Yorkshire Opal, Crystal, Diamond")}&body=${encodeURIComponent(summaryText(n,cost))}">✉️ Open pre-filled email</a></div>
+    <label class="row" style="font-size:13px;font-weight:600"><input type="checkbox" onchange="toast('Logged: PO request emailed to Finance')"> I've emailed the PO request to Finance (Luke &amp; Karnika)</label></div></div>`;
+  if(k==="posent")return `<div class="card next"><h3>Next step: record the PO number <small>Emailed to Finance 11 Nov</small></h3><div class="cb">
+    <div class="row"><input type="text" placeholder="PO number e.g. PO-2026-0412"><button class="btn primary" onclick="toast('PO number saved')">Save PO number</button></div>
+    <div class="muted" style="font-size:12.5px">No PO after 5 working days turns this entry red. Chase Finance by email.</div></div></div>`;
+  if(k==="porec")return `<div class="card next"><h3>Next step: enter and pay the organiser <small>PO-2026-0412 · Entry deadline 1 Dec</small></h3><div class="cb">
+    <label class="row" style="font-size:13px"><input type="checkbox"> Entered with organiser</label>
+    <label class="row" style="font-size:13px"><input type="checkbox"> Organiser paid (${gbp(cost)})</label></div></div>`;
+  if(k==="entered")return `<div class="card next"><h3>Ready for competition day <small>Sat 5 Dec</small></h3><div class="cb">
+    <div class="ok">✓ Entered 27 Nov · organiser paid · judge approved</div>
+    <div class="row"><button class="btn" disabled>Mark completed</button><span class="muted" style="font-size:12px">Available after 5 Dec</span></div></div></div>`;
+  return `<div class="card next" style="border-color:var(--line)"><h3>Completed <small>6 Dec 2026</small></h3><div class="cb">
+    <div class="lock">Reminder: coaches log TOIL in PeopleHR; judges and travel expenses go through Zelt.</div>
+    <div class="row" style="justify-content:space-between"><span>Gymnast details due for removal: <b>5 Dec 2027</b></span><button class="btn sm" disabled title="${can.removeData()?"Available from 5 Dec 2027":"Head Office only"}">Remove gymnast details</button></div></div></div>`;
+}
+function render(){
+  const k=STAGES[st].k, H=HEALTH[st];
+  const active=G.filter(g=>!(g.wd&&st>=2));const n=active.length;
+  const cost=active.reduce((a,g)=>a+FEES[g.lv],0);
+  const states=G.map(gstate);
+  const income=G.reduce((a,g,i)=>a+(states[i].paid?price(g)-(g.cr||0):0),0);
+  const expected=active.reduce((a,g)=>a+price(g),0);
+  const locked=st<2; // payment ticks locked before sign-off
+  const pricesConfirmed=st>=2;
+  const judgeOk=st>=2;
+  const editable=k!=="done";
+  document.getElementById("app").innerHTML=`
+  <div class="crumb">Home / Competitions / External Competition Entries / <b>Yorkshire Opal, Crystal, Diamond — Leeds</b></div>
+  <div class="head">
+    <div><div class="row"><span class="pill sitebadge">LEEDS</span><span class="pill" style="background:var(--t-reg-t);color:var(--t-reg)">Regional/National Competition</span></div>
+      <h1 style="margin-top:6px">Yorkshire Opal, Crystal, Diamond</h1>
+      <div class="sub">Sat 5 Dec 2026 · Huddersfield Sports Centre · Yorkshire Gymnastics · <a href="#" style="color:var(--orange-dark)">View on calendar</a></div></div>
+    <div class="status"><span class="dot ${H.h}"></span><span class="stage ${k==="signoff"?"hot":""}">${STAGES[k==="signoff"?1:st].l}</span><span>Waiting on: <b>${H.w}</b></span><span class="muted" style="font-size:12px">· today ${STAGES[st].today}</span></div>
+  </div>
+  ${stepper()}
+  <div class="cols"><div>
+    ${nextStep(n,cost)}
+    <div class="card"><h3>Gymnasts <small>${n} entered${st>=2?" · 1 withdrawn":""}</small></h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Name</th><th>DOB</th><th>Fee level</th><th class="c">T-shirt</th><th class="n">Parent price</th><th class="c">Debt on BARS</th><th class="c">Paid</th><th class="n">Amount</th><th class="n">Credit</th><th>Date paid</th><th class="c">Marked paid on BARS</th><th></th></tr></thead>
+        <tbody>${G.map((g,i)=>{const s=states[i];const dis=locked||!editable||s.wd?"disabled":"";
+          const lv=(k==="draft"&&g.n==="Mia Daniels")?`<select class="f" style="border-color:var(--red)"><option>— set level —</option><option>Opal</option><option>Crystal</option><option>Diamond</option></select>`:g.lv;
+          const flag=!s.wd&&((k==="collect"&&(!s.paid||!s.bars)));
+          return `<tr class="${s.wd?"wd":""} ${flag?"flag":""}"><td class="nm"><b>${g.n}</b></td><td>${g.dob}</td><td>${lv}</td><td class="c">${g.ts?"✓":"—"}</td><td class="n">${gbp(price(g))}</td>
+          ${s.wd?`<td class="note" colspan="6">Withdrawn — ${g.wd}</td><td><button class="kebab" title="Undo withdraw">↺</button></td>`:
+          `<td class="c"><input type="checkbox" ${s.debt?"checked":""} ${dis}></td><td class="c"><input type="checkbox" ${s.paid?"checked":""} ${dis}></td>
+          <td class="n">${s.paid?gbp(price(g)-(g.cr||0)):"—"}</td><td class="n">${s.paid&&g.cr?gbp(g.cr):"—"}</td><td>${s.date||"—"}</td>
+          <td class="c"><input type="checkbox" ${s.bars?"checked":""} ${dis}></td><td><button class="kebab" title="Edit · Withdraw" onclick="toast('Menu: Edit · Withdraw (strike through + note)')">⋯</button></td>`}</tr>`}).join("")}
+        <tr class="tfoot"><td colspan="4">Totals (excl. withdrawn)</td><td class="n">${gbp(expected)}</td><td colspan="2"></td><td class="n">${gbp(income)}</td><td colspan="4"></td></tr>
+        </tbody></table></div>
+      <div class="cb row" style="justify-content:space-between">${editable?`<button class="btn sm">+ Add gymnast</button>`:"<span></span>"}
+        ${locked?`<span class="muted" style="font-size:12px">🔒 Payment ticks unlock after sign-off</span>`:`<span class="muted" style="font-size:12px">Every tick is logged with who and when</span>`}</div>
+    </div>
+
+    <div class="card"><h3>Pricing <small>Organiser fee + ${UP*100}% uplift</small></h3><div class="cb">
+      <table class="feelv"><thead><tr><th>Fee level</th><th class="n">Organiser fee</th><th class="n">Parent price</th><th class="n">Gymnasts</th></tr></thead><tbody>
+      ${Object.entries(FEES).map(([l,f])=>`<tr><td>${l}</td><td class="n">${gbp(f)}</td><td class="n"><b>${gbp(f*(1+UP))}</b></td><td class="n">${active.filter(g=>g.lv===l).length}</td></tr>`).join("")}
+      <tr><td>Extra: Competition T-shirt</td><td class="n">—</td><td class="n"><b>${gbp(TSHIRT)}</b></td><td class="n">${active.filter(g=>g.ts).length}</td></tr></tbody></table>
+      <div style="margin-top:10px">${pricesConfirmed?`<div class="ok">✓ Parent prices confirmed by Jamie Harrison · 6 Nov 09:12</div>`:
+        can.confirmPrice()?`<div class="row"><button class="btn sm primary" onclick="toast('Prices confirmed — logged')">Confirm parent prices</button><span class="muted" style="font-size:12px">Confirm before telling parents the price</span></div>`:
+        `<div class="lock">🔒 Parent prices must be confirmed by the Club Head Coach or Head of Gymnastics before you tell parents.</div>`}</div></div></div>
+
+    <div class="card"><h3>Staff <small>Judges required: 1</small></h3><div class="cb">
+      <div class="muted" style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Coaches</div>
+      <div class="person"><span class="av">MM</span><div style="flex:1"><div class="nm">Melissa Moxon</div><div class="s">Leeds · Coach</div></div><select class="f"><option>Own car</option><option>Carpool</option><option>Public transport</option><option>Taxi</option></select></div>
+      ${editable?`<button class="btn sm" style="margin:6px 0 12px">+ Add coach</button>`:""}
+      <div class="muted" style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Judges</div>
+      <div class="person"><span class="av">AP</span><div style="flex:1"><div class="nm">Amy Peacock</div><div class="s">Leeds · picked from any active coach</div></div>
+        <select class="f"><option>Carpool</option><option>Own car</option></select>
+        ${judgeOk?`<span class="jst ok">Approved · Jamie Harrison 6 Nov</span>`:`<span class="jst pend">Pending approval</span>${can.approveJudge()?` <button class="btn sm primary" onclick="toast('Judge approved — logged')">Approve</button>`:""}`}</div>
+      ${!judgeOk&&!can.approveJudge()?`<div class="lock" style="margin-top:6px">🔒 Judges are approved by an RGM or the Head of Gymnastics.</div>`:""}
+      ${editable?`<button class="btn sm" style="margin-top:8px">+ Add judge</button>`:""}
+      <div class="muted" style="font-size:12px;margin-top:8px">Travel and judge expenses are claimed in Zelt. Transport is for planning carpools only.</div>
+    </div></div>
+  </div>
+
+  <div>
+    <div class="card"><h3>Health <span class="dot ${H.h}"></span></h3><div class="cb">
+      <ul class="reasons">${H.r.map(([c,t])=>`<li class="${c}">${t}</li>`).join("")}${H.m.map(t=>`<li class="m">⚠ Missing: ${t}</li>`).join("")}</ul></div></div>
+    <div class="card"><h3>Key dates</h3><div class="cb"><dl class="meta">
+      <dt>Competition</dt><dd>Sat 5 Dec 2026</dd><dt>Entry deadline</dt><dd>Tue 1 Dec</dd><dt>Organiser payment</dt><dd>Tue 1 Dec</dd>
+      <dt>PO due by</dt><dd style="color:${st<4?"var(--red)":"inherit"}">Tue 3 Nov</dd><dt>Collect payments by</dt><dd>Tue 3 Nov</dd>
+      <dt>PO number</dt><dd>${st>=5?"<b>PO-2026-0412</b>":"—"}</dd></dl></div></div>
+    <div class="card"><h3>Money</h3><div class="cb money">
+      <div><span>Expected from parents</span><b>${gbp(expected)}</b></div>
+      <div><span>Collected so far${states[4].paid?' <span class="muted">(+ £6.00 BARS credit used)</span>':""}</span><span>${gbp(income)}</span></div>
+      <div><span>Organiser fees (${n} × level fee)</span><span>− ${gbp(cost)}</span></div>
+      <div class="tot"><span>Net to club</span><span>${gbp(expected-cost)}</span></div>
+      <div class="muted" style="font-size:11.5px">Covers admin, judging, travel and staffing (policy s5). T-shirts are included in the parent total.</div></div></div>
+    <div class="card"><h3>Activity <small>${LOG.filter(l=>l[0]<=st).length} actions</small></h3><div class="cb">
+      <ul class="tl">${LOG.filter(l=>l[0]<=st).reverse().map(l=>`<li class="${l[4]?"k":""}"><div>${l[1]}<div class="w"><b>${l[2]}</b> · ${l[3]}</div></div></li>`).join("")}</ul>
+      <div class="muted" style="font-size:11.5px;margin-top:6px">Read-only. Gymnast names are looked up live, not stored in the log, so they disappear when gymnast details are removed.</div></div></div>
+  </div></div>`;
+}
+render();
+</script>
+</body>
+</html>

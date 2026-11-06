@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Competition Calendar — mockup</title>
+<style>
+:root{
+  --orange:#F58220;--orange-dark:#D9690B;--orange-tint:#FEF0E3;
+  --ink:#1F2933;--slate:#52606D;--slate-light:#9AA5B1;--line:#E4E7EB;--bg:#F5F6F8;--card:#fff;
+  --green:#2E9E5B;--green-t:#E6F5EC;--amber:#B07C0C;--amber-dot:#E0A11B;--amber-t:#FCF3DD;
+  --red:#C0362C;--red-t:#FDECEA;--grey:#9AA2AB;--grey-t:#EEF0F2;
+  /* event types */
+  --t-all:#F58220;--t-all-t:#FEF0E3;
+  --t-club:#B0408E;--t-club-t:#F8E8F3;
+  --t-inv:#2B7BB9;--t-inv-t:#E5F0F9;
+  --t-reg:#5146A8;--t-reg-t:#ECEAF8;
+  --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+a{color:inherit}
+.nav{background:#fff;border-bottom:1px solid var(--line);height:52px;display:flex;align-items:center;gap:22px;padding:0 20px;font-size:13px;color:var(--slate);overflow-x:auto;white-space:nowrap}
+.nav b{color:var(--orange);font-size:15px;margin-right:8px}
+.nav .on{color:var(--ink);font-weight:600;border-bottom:2px solid var(--orange);padding:15px 0 13px}
+.mocknote{background:#FFF8E6;border-bottom:1px solid #F3E0B0;font-size:12px;color:#7A5A00;padding:6px 20px}
+.wrap{max-width:1280px;margin:0 auto;padding:18px 16px 60px}
+.crumb{font-size:12px;color:var(--slate-light);margin-bottom:6px}.crumb b{color:var(--slate)}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:12px}
+h1{font-size:22px;margin:0}
+.sub{color:var(--slate);font-size:13px;margin-top:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;background:#fff;overflow:hidden}
+.seg button{border:0;background:none;padding:7px 12px;font-size:13px;color:var(--slate);cursor:pointer}
+.seg button.on{background:var(--orange);color:#fff;font-weight:600}
+.year{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.iconbtn{border:1px solid var(--line);background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--slate)}
+.bar{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px}
+.bar .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate-light);font-weight:600;margin-right:4px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font-size:12px;color:var(--slate);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+.chip.off{opacity:.45}
+.sw{width:9px;height:9px;border-radius:3px;display:inline-block}
+.toggle{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--slate);cursor:pointer}
+.attn{margin-left:auto;font-size:12.5px;color:var(--slate)}
+.attn b{color:var(--red)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+/* grid */
+.gridwrap{overflow:auto;max-height:72vh}
+table.grid{table-layout:fixed;border-collapse:separate;border-spacing:0;width:100%;min-width:980px;font-size:12px}
+.grid th{position:sticky;top:0;background:var(--bg);z-index:2;font-weight:600;color:var(--slate);text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+.grid th.wk{width:96px;left:0;z-index:3}
+.grid td{border-bottom:1px solid var(--line);border-right:1px solid #F0F2F4;vertical-align:top;padding:4px 5px;height:34px;width:12.5%}
+.grid td.wk{position:sticky;left:0;background:#fff;color:var(--slate);font-size:11.5px;white-space:nowrap;z-index:1}
+.grid tr.month td{background:#FAFBFC;font-weight:700;font-size:12px;color:var(--ink);padding:7px 8px;height:auto;position:sticky}
+.grid tr.now td{background:#FFF7EF}
+.grid tr.now td.wk{color:var(--orange-dark);font-weight:700}
+.grid tr.past td:not(.wk){opacity:.55}
+.ev{display:flex;align-items:center;gap:5px;border-radius:6px;padding:3px 6px;margin:1px 0;cursor:pointer;font-size:11.5px;line-height:1.25;border-left:3px solid}
+.ev:hover{filter:brightness(.96)}
+.ev .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .d{color:var(--slate);font-size:10.5px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.dot.red{background:var(--red)}.dot.amber{background:var(--amber-dot)}.dot.green{background:var(--green)}.dot.grey{background:var(--grey)}
+.dl{font-size:10.5px;color:var(--slate);border:1px dashed #C9D0D7;border-radius:6px;padding:2px 6px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl.late{border-color:#E8A49E;color:var(--red)}
+.t-all{background:var(--t-all-t);border-color:var(--t-all)}.t-club{background:var(--t-club-t);border-color:var(--t-club)}
+.t-inv{background:var(--t-inv-t);border-color:var(--t-inv)}.t-reg{background:var(--t-reg-t);border-color:var(--t-reg)}
+.allsites{display:flex;align-items:center;gap:6px;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11.5px;border-left:3px solid;font-weight:600}
+/* month */
+.mhead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-weight:700}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr)}
+.mgrid .dn{font-size:11px;color:var(--slate-light);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.mgrid .day{min-height:104px;border-right:1px solid #F0F2F4;border-bottom:1px solid #F0F2F4;padding:5px}
+.mgrid .day .n{font-size:11.5px;color:var(--slate);margin-bottom:3px}
+.mgrid .day.out{background:#FAFBFC}.mgrid .day.out .n{color:#C5CCD3}
+.mgrid .day.today .n{background:var(--orange);color:#fff;border-radius:999px;display:inline-block;padding:0 6px;font-weight:700}
+.sitetag{font-size:10px;font-weight:700;color:var(--slate);background:#fff;border:1px solid var(--line);border-radius:4px;padding:0 3px}
+/* list */
+.lmonth{padding:10px 14px;font-weight:700;border-bottom:1px solid var(--line);background:#FAFBFC;display:flex;justify-content:space-between;cursor:pointer}
+.lrow{display:grid;grid-template-columns:110px 1fr auto;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center;cursor:pointer}
+.lrow:hover{background:#FBFBFC}
+.lrow .date{font-size:12.5px;color:var(--slate)}
+.lrow .name{font-weight:600}
+.typepill{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;display:inline-block;margin-top:3px}
+.sitechips{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+.sc{display:inline-flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;background:#fff;color:var(--slate)}
+/* panel */
+.scrim{position:fixed;inset:0;background:rgba(16,24,40,.25);display:none;z-index:20}
+.panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100%;background:#fff;box-shadow:-8px 0 24px rgba(16,24,40,.12);transform:translateX(100%);transition:transform .18s;z-index:21;display:flex;flex-direction:column}
+.panel:not(.open){box-shadow:none;visibility:hidden;transition:transform .18s,visibility 0s .18s}.panel.open{transform:none}.scrim.open{display:block}
+.ph{padding:16px 18px;border-bottom:1px solid var(--line)}
+.ph h2{margin:6px 0 2px;font-size:18px}
+.pb{padding:14px 18px;overflow:auto;flex:1}
+.meta{display:grid;grid-template-columns:120px 1fr;gap:5px 10px;font-size:13px;margin-bottom:14px}
+.meta dt{color:var(--slate-light)}.meta dd{margin:0}
+.sec{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate-light);font-weight:700;margin:14px 0 6px}
+.site{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.site .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.site .nm{font-weight:700;flex:1}
+.stage{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--grey-t);color:var(--slate)}
+.stage.signoff{background:var(--red-t);color:var(--red)}
+.wait{font-size:11.5px;color:var(--slate)}
+.reasons{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--slate)}
+.reasons li.r{color:var(--red)}.reasons li.a{color:var(--amber)}
+.miss{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-t);border-radius:999px;padding:1px 7px}
+.openlink{display:inline-block;margin-top:7px;font-size:12.5px;color:var(--orange-dark);font-weight:600;text-decoration:none}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+.note{font-size:12px;color:var(--slate);background:var(--bg);border-radius:8px;padding:8px 10px}
+.legendhealth{display:flex;gap:12px;font-size:12px;color:var(--slate);align-items:center;flex-wrap:wrap}
+.hidden{display:none!important}
+@media (max-width:720px){
+  .wrap{padding:12px 16px 40px}
+  .lrow{grid-template-columns:1fr}.sitechips{justify-content:flex-start}
+  .mgrid .day{min-height:70px}.mgrid .ev .t{display:none}
+  .attn{margin-left:0}
+}
+</style>
+</head>
+<body>
+<div class="nav"><b>NWG Coaches Hub</b><span>Home</span><span>Club Profile ▾</span><span>Gymnastics ▾</span><span class="on">Competitions ▾</span><span>Operations ▾</span><span>People ▾</span><span>Admin ▾</span><span>Settings</span></div>
+<div class="mocknote">MOCKUP — Phase 2 · Competition Calendar · sample data from NWG COMPS 2026 CENTRAL.xlsx · "today" = Fri 6 Nov 2026 · viewing as Head of Gymnastics</div>
+
+<div class="wrap">
+  <div class="crumb">Home / Competitions / <b>Competition Calendar</b></div>
+  <div class="head">
+    <div>
+      <h1>Competition Calendar</h1>
+      <div class="sub">Every competition across all 7 clubs. Click any competition for details and each club's entry.</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div class="year"><button class="iconbtn" title="Previous year">‹</button><span>2026</span><button class="iconbtn" title="Next year">›</button></div>
+      <div class="seg" id="views">
+        <button data-v="grid" class="on">Season grid</button><button data-v="list">List</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="chips"><span class="lbl">Clubs</span><span id="sitechips" class="chips"></span></div>
+    <div class="chips"><span class="lbl">Type</span><span id="typechips" class="chips"></span></div>
+    <label class="toggle"><input type="checkbox" id="showdl"> Show deadlines</label>
+    <label class="toggle"><input type="checkbox" id="attnonly"> Needs attention only</label>
+    <div class="attn" id="attnsum"></div>
+  </div>
+
+  <div class="legendhealth" style="margin:0 2px 10px">
+    <span><span class="dot red"></span> Overdue</span><span><span class="dot amber"></span> Due soon</span><span><span class="dot green"></span> On track</span><span><span class="dot grey"></span> Done</span>
+    <span style="color:var(--slate-light)">· dot = that club's entry health · NWG-run comps have no dot (no entry)</span>
+  </div>
+
+  <div id="v-grid" class="card gridwrap"></div>
+    <div id="v-list" class="card hidden"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" aria-label="Competition details"></aside>
+
+<script>
+const SITES=["Burnley","Coventry","Leeds","Mansfield","Rotherham","Wirral","Wolverhampton"];
+const AB={Burnley:"BUR",Coventry:"COV",Leeds:"LEE",Mansfield:"MAN",Rotherham:"ROT",Wirral:"WIR",Wolverhampton:"WOL"};
+const TYPES={all:"NWG All Competition",club:"NWG Club Competition",inv:"Invitational Competition",reg:"Regional/National Competition"};
+const TODAY=new Date(Date.UTC(2026,10,6));
+const D=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(Date.UTC(y,m-1,d))};
+const fmt=(d,o={day:"numeric",month:"short"})=>d.toLocaleDateString("en-GB",{...o,timeZone:"UTC"});
+const C=(h)=>({stage:"Completed",health:"grey",waiting:"—",reasons:[],missing:0,...h});
+const ALL=SITES;
+const EV=[
+ {id:1,t:"Aspire Mock Grades",ty:"inv",s:"2026-01-17",sites:{Rotherham:C()}},
+ {id:2,t:"Yorkshire Regional Preparation Grades",ty:"reg",s:"2026-01-31",sites:{Leeds:C(),Rotherham:C()}},
+ {id:3,t:"West Midlands Regional Prep/Dev Grades",ty:"reg",s:"2026-01-31",sites:{Coventry:C(),Wolverhampton:C()}},
+ {id:4,t:"DGA Grades Invitational",ty:"inv",s:"2026-02-07",sites:{Mansfield:C()}},
+ {id:5,t:"Summit Grades Invitational",ty:"inv",s:"2026-02-14",sites:{Coventry:C()}},
+ {id:6,t:"Dronfield Make the Grade",ty:"inv",s:"2026-02-14",sites:{Rotherham:C()}},
+ {id:7,t:"Garstang Prep/Devel Grades",ty:"inv",s:"2026-03-07",e:"2026-03-08",sites:{Burnley:C()}},
+ {id:8,t:"Yorkshire Dev/Excel/Perf Grades",ty:"reg",s:"2026-03-07",sites:{Leeds:C(),Rotherham:C()}},
+ {id:9,t:"East Mids Prep 1 & 2 and Dev Grades",ty:"reg",s:"2026-03-07",sites:{Mansfield:C()}},
+ {id:10,t:"Notts Invitational & Rugby Rocks",ty:"inv",s:"2026-03-14",sites:{Mansfield:C()}},
+ {id:11,t:"British Championships",ty:"reg",s:"2026-03-21",sites:{Burnley:C()}},
+ {id:12,t:"NWG GfA Interclub",ty:"all",s:"2026-03-29",sites:"all"},
+ {id:15,t:"Wolves Club Comp",ty:"club",s:"2026-04-19",sites:{Wolverhampton:null}},
+ {id:13,t:"MAG English Challenge Championships",ty:"reg",s:"2026-04-25",sites:{Coventry:C()}},
+ {id:14,t:"East Mids Regional GFA (Novice, Inter)",ty:"reg",s:"2026-04-25",sites:{Mansfield:C()}},
+ {id:16,t:"Longridge GC Spring Invitational",ty:"inv",s:"2026-05-09",e:"2026-05-10",sites:{Burnley:C()}},
+ {id:17,t:"NWG MAG Invitational",ty:"all",s:"2026-05-09",sites:"all"},
+ {id:19,t:"National Finals",ty:"reg",s:"2026-05-23",sites:{Coventry:C(),Mansfield:C(),Rotherham:C()}},
+ {id:18,t:"Burnley Club Comp",ty:"club",s:"2026-05-24",sites:{Burnley:null}},
+ {id:22,t:"Mansfield Club Comp",ty:"club",s:"2026-06-14",sites:{Mansfield:null}},
+ {id:20,t:"IGNITE MAG",ty:"inv",s:"2026-06-20",sites:{Rotherham:C()}},
+ {id:21,t:"Jim Moss English Championships",ty:"reg",s:"2026-06-27",sites:{Coventry:C()}},
+ {id:23,t:"Mill Magic Open",ty:"inv",s:"2026-07-04",sites:{Mansfield:C(),Wolverhampton:C()}},
+ {id:24,t:"NWG Inter-Club",ty:"all",s:"2026-07-19",sites:"all"},
+ {id:25,t:"Wire CC Invitational — Fearless & Fierce",ty:"inv",s:"2026-09-06",sites:{Burnley:C()}},
+ {id:26,t:"Rugby Classic Cup",ty:"inv",s:"2026-09-12",sites:{Coventry:C(),Wolverhampton:C()}},
+ {id:27,t:"Red Rose",ty:"inv",s:"2026-09-19",sites:{Burnley:C()}},
+ {id:28,t:"NWG WAG Invitational",ty:"all",s:"2026-09-27",sites:"all"},
+ {id:29,t:"Notts Open",ty:"inv",s:"2026-10-03",sites:{Coventry:C(),Mansfield:C()}},
+ {id:30,t:"NWG Classic Challenge (B, S, G, FIG)",ty:"all",s:"2026-10-17",sites:"all"},
+ {id:31,t:"Doncaster Floor and Vault",ty:"inv",s:"2026-11-07",venue:"Doncaster Gymnastics Centre",org:"Doncaster GC",dl:{entry:"2026-10-09",pay:"2026-10-16"},
+   sites:{Leeds:{stage:"Entered",health:"green",waiting:"—",reasons:["Entered with organiser 8 Oct","PO 4471 received"],missing:0,n:14}}},
+ {id:32,t:"Copper/Zinc Club Challenge",ty:"reg",s:"2026-11-14",venue:"EIS Sheffield",org:"Yorkshire Gymnastics",dl:{entry:"2026-10-24",pay:"2026-10-31"},
+   sites:{Leeds:{stage:"PO received",health:"amber",waiting:"Co-ordinator",reasons:["a|Not yet marked entered with organiser"],missing:0,n:11},
+          Rotherham:{stage:"Collecting payments",health:"red",waiting:"Co-ordinator",reasons:["r|Entry deadline 24 Oct passed — not entered","r|4 of 16 gymnasts unpaid (collect-by 26 Sep)","r|PO request not sent (was due 26 Sep)"],missing:1,n:16}}},
+ {id:33,t:"Mansfield Club Competition",ty:"club",s:"2026-11-14",sites:{Mansfield:null}},
+ {id:34,t:"Yorkshire Teams",ty:"reg",s:"2026-11-21",venue:"Leeds Gymnastics Club",org:"Yorkshire Gymnastics",dl:{entry:"2026-10-31",pay:"2026-10-31"},
+   sites:{Leeds:{stage:"Entered",health:"amber",waiting:"RGM / HOG",reasons:["a|Judges: 0 of 1 approved — comp in 15 days","Judge Amy Peacock pending approval"],missing:0,n:8}}},
+ {id:35,t:"Mill Merry Open",ty:"inv",s:"2026-11-28",venue:"The Mill, Nottingham",org:"Mill GC",dl:{entry:"2026-11-13",pay:"2026-11-13"},
+   sites:{Mansfield:{stage:"PO requested",health:"amber",waiting:"Finance (PO number)",reasons:["a|PO request emailed 2 Nov — 4 working days, no PO number yet","a|Entry deadline 13 Nov in 7 days"],missing:0,n:25}}},
+ {id:36,t:"Classic Challenge Teams",ty:"all",s:"2026-11-28",sites:"all"},
+ {id:37,t:"Rotherham Club Comp",ty:"club",s:"2026-11-28",sites:{Rotherham:null}},
+ {id:38,t:"Yorkshire Opal, Crystal, Diamond",ty:"reg",s:"2026-12-05",venue:"Huddersfield Sports Centre",org:"Yorkshire Gymnastics",dl:{entry:"2026-12-01",pay:"2026-12-01",po:"2026-11-03"},
+   sites:{Leeds:{stage:"Awaiting sign-off",health:"red",waiting:"HOG",reasons:["r|Sign-off outstanding — PO was due by 3 Nov","a|Entry deadline 1 Dec"],missing:2,n:9}}},
+ {id:39,t:"Merseyside Winter Invitational",ty:"inv",s:"2026-12-12",venue:"TBC",org:"Wirral GC",dl:{entry:"2027-01-08"},
+   sites:{Wirral:{stage:"Draft",health:"green",waiting:"Co-ordinator",reasons:["Request sign-off when gymnast list is ready"],missing:3,n:0}}},
+];
+EV.forEach(e=>{e.sd=D(e.s);e.ed=e.e?D(e.e):e.sd;if(e.sites==="all"){e.sites={};ALL.forEach(s=>e.sites[s]=null);e.allSites=true}
+  if(e.dl&&e.dl.entry&&!e.dl.po){const p=D(e.dl.entry);p.setUTCDate(p.getUTCDate()-28);e.dl.po=p.toISOString().slice(0,10)}});
+
+const state={view:"grid",sites:new Set(SITES),types:new Set(Object.keys(TYPES)),dl:false,attn:false};
+const typeVar=k=>`var(--t-${k})`;
+const sevRank={red:3,amber:2,green:1,grey:0};
+const worst=e=>Object.values(e.sites).filter(Boolean).reduce((w,x)=>sevRank[x.health]>sevRank[w]?x.health:w,"grey");
+const needsAttn=e=>Object.entries(e.sites).some(([s,x])=>x&&state.sites.has(s)&&(x.health==="red"||x.health==="amber"||x.missing>0));
+const visible=e=>state.types.has(e.ty)&&Object.keys(e.sites).some(s=>state.sites.has(s))&&(!state.attn||needsAttn(e));
+const dateLabel=e=>e.ed>e.sd?`${fmt(e.sd,{weekday:"short",day:"numeric"})}–${fmt(e.ed,{weekday:"short",day:"numeric"})}`:fmt(e.sd,{weekday:"short",day:"numeric"});
+
+function chips(){
+  sitechips.innerHTML=SITES.map(s=>`<span class="chip ${state.sites.has(s)?"on":"off"}" data-s="${s}">${s}</span>`).join("")+`<span class="chip" data-s="*">All</span>`;
+  typechips.innerHTML=Object.entries(TYPES).map(([k,v])=>`<span class="chip ${state.types.has(k)?"on":"off"}" data-t="${k}"><span class="sw" style="background:${typeVar(k)}"></span>${v.replace(" Competition","")}</span>`).join("");
+  let r=0,a=0;EV.forEach(e=>Object.entries(e.sites).forEach(([s,x])=>{if(x&&state.sites.has(s)){if(x.health==="red")r++;else if(x.health==="amber")a++}}));
+  const so=EV.reduce((n,e)=>n+Object.values(e.sites).filter(x=>x&&x.stage==="Awaiting sign-off").length,0);
+  attnsum.innerHTML=`<b>${r} overdue</b> · <span style="color:var(--amber)">${a} due soon</span> · <span style="color:var(--red);font-weight:600;cursor:pointer" id="mysign">${so} awaiting my sign-off</span>`;
+}
+sitechips.onclick=e=>{const c=e.target.closest("[data-s]");if(!c)return;const s=c.dataset.s;
+  if(s==="*")state.sites=new Set(SITES);else if(state.sites.size===SITES.length)state.sites=new Set([s]);else state.sites.has(s)?state.sites.delete(s):state.sites.add(s);
+  if(!state.sites.size)state.sites=new Set(SITES);render()};
+typechips.onclick=e=>{const c=e.target.closest("[data-t]");if(!c)return;const t=c.dataset.t;state.types.has(t)?state.types.delete(t):state.types.add(t);if(!state.types.size)state.types=new Set(Object.keys(TYPES));render()};
+showdl.onchange=()=>{state.dl=showdl.checked;render()};
+attnonly.onchange=()=>{state.attn=attnonly.checked;render()};
+views.onclick=e=>{const b=e.target.closest("button");if(!b)return;state.view=b.dataset.v;render()};
+
+function evPill(e,site){
+  const x=site?e.sites[site]:null;
+  const dot=x?`<span class="dot ${x.health}" title="${x.stage}"></span>`:"";
+  return `<div class="ev t-${e.ty}" data-id="${e.id}" title="${e.t} — ${TYPES[e.ty]}">${dot}<span class="t">${e.t}</span><span class="d">${dateLabel(e)}</span></div>`;
+}
+function grid(){
+  const cols=SITES.filter(s=>state.sites.has(s));
+  let h=`<table class="grid"><thead><tr><th class="wk">Week</th>${cols.map(s=>`<th>${s}</th>`).join("")}</tr></thead><tbody>`;
+  let d=D("2025-12-29"),lastM=-1;
+  const thisMon=D("2026-11-02");
+  while(d<D("2027-01-01")){
+    const end=new Date(d);end.setUTCDate(end.getUTCDate()+6);
+    const m=(d.getUTCFullYear()<2026?0:d.getUTCMonth());
+    const mm=new Date(d);mm.setUTCDate(mm.getUTCDate()+3); const mo=mm.getUTCMonth(); // month by Thursday
+    if(mo!==lastM){h+=`<tr class="month"><td colspan="${cols.length+1}">${fmt(mm,{month:"long",year:"numeric"})}</td></tr>`;lastM=mo}
+    const wkEv=EV.filter(e=>visible(e)&&e.sd<=end&&e.ed>=d);
+    const cls=+d===+thisMon?"now":(end<TODAY?"past":"");
+    h+=`<tr class="${cls}"><td class="wk">w/c ${fmt(d)}${cls==="now"?"<br><b>This week</b>":""}</td>`;
+    const allEv=wkEv.filter(e=>e.allSites);
+    if(allEv.length&&cols.length===SITES.length){
+      // all-site comps span the row
+      h+=`<td colspan="${cols.length}">${allEv.map(e=>`<div class="allsites t-${e.ty}" data-id="${e.id}"><span>${e.t}</span><span class="d" style="font-weight:400">· ${dateLabel(e)} · all clubs</span></div>`).join("")}`;
+      const rest=wkEv.filter(e=>!e.allSites);
+      if(rest.length)h+=`<div style="display:grid;grid-template-columns:repeat(${cols.length},1fr);gap:4px">${cols.map(s=>`<div>${rest.filter(e=>s in e.sites).map(e=>evPill(e,s)).join("")}</div>`).join("")}</div>`;
+      h+=`</td>`;
+    } else {
+      cols.forEach(s=>{
+        let c=wkEv.filter(e=>s in e.sites).map(e=>e.allSites?`<div class="ev t-${e.ty}" data-id="${e.id}"><span class="t">${e.t}</span></div>`:evPill(e,s)).join("");
+        if(state.dl)EV.forEach(e=>{if(!e.dl||!(s in e.sites)||!e.sites[s]||!visible(e))return;
+          [["po","PO due"],["entry","Entry deadline"],["pay","Organiser payment"]].forEach(([k,l])=>{if(!e.dl[k])return;const dd=D(e.dl[k]);
+            if(dd>=d&&dd<=end){const late=dd<TODAY&&!["Entered","Completed","PO received"].includes(e.sites[s].stage)&&k!=="pay";
+              c+=`<div class="dl ${late?"late":""}" data-id="${e.id}" title="${l} · ${e.t}">${late?"⚠ ":"⏰ "}${l} ${fmt(dd,{weekday:"short",day:"numeric"})} · ${e.t}</div>`}})});
+        h+=`<td>${c}</td>`});
+    }
+    h+=`</tr>`;d=new Date(d);d.setUTCDate(d.getUTCDate()+7);
+  }
+  return h+`</tbody></table>`;
+}
+function list(){
+  const evs=EV.filter(visible).sort((a,b)=>a.sd-b.sd);const by={};
+  evs.forEach(e=>{const k=fmt(e.sd,{month:"long",year:"numeric"});(by[k]=by[k]||[]).push(e)});
+  return Object.entries(by).map(([k,arr])=>{const past=arr.every(e=>e.ed<TODAY);
+    return `<div class="lmonth" data-m="${k}"><span>${k}</span><span style="font-weight:400;color:var(--slate)">${arr.length} competition${arr.length>1?"s":""} ${past?"▸":"▾"}</span></div><div class="${past?"hidden":""}">${arr.map(e=>`
+    <div class="lrow" data-id="${e.id}"><div class="date">${dateLabel(e)}</div>
+      <div><div class="name">${e.t}</div><span class="typepill" style="background:var(--t-${e.ty}-t);color:${typeVar(e.ty)}">${TYPES[e.ty]}</span></div>
+      <div class="sitechips">${e.allSites?`<span class="sc">All clubs</span>`:Object.entries(e.sites).filter(([s])=>state.sites.has(s)).map(([s,x])=>`<span class="sc">${x?`<span class="dot ${x.health}"></span>`:""}${s}${x&&x.missing?` <span class="miss">⚠${x.missing}</span>`:""}</span>`).join("")}</div>
+    </div>`).join("")}</div>`}).join("");
+}
+function render(){
+  chips();
+  document.querySelectorAll("#views button").forEach(b=>b.classList.toggle("on",b.dataset.v===state.view));
+  ["grid","list"].forEach(v=>document.getElementById("v-"+v).classList.toggle("hidden",v!==state.view));
+  if(state.view==="grid")document.getElementById("v-grid").innerHTML=grid();
+  if(state.view==="list")document.getElementById("v-list").innerHTML=list();
+  if(state.view==="grid"){const now=document.querySelector("tr.now");if(now&&!render.scrolled){render.scrolled=1;const w=document.getElementById("v-grid");w.scrollTop=now.offsetTop-120}}
+  const ms=document.getElementById("mysign");if(ms)ms.onclick=()=>{state.attn=true;attnonly.checked=true;state.view="list";render()};
+}
+document.addEventListener("click",e=>{
+  const m=e.target.closest(".lmonth");if(m){m.nextElementSibling.classList.toggle("hidden");return}
+  const el=e.target.closest("[data-id]");if(el&&!e.target.closest(".panel"))openPanel(+el.dataset.id);
+});
+function openPanel(id){
+  const e=EV.find(x=>x.id===id);const entries=Object.entries(e.sites);
+  const nwg=e.ty==="all"||e.ty==="club";
+  panel.innerHTML=`<div class="ph"><div style="display:flex;justify-content:space-between;align-items:center"><span class="typepill" style="background:var(--t-${e.ty}-t);color:${typeVar(e.ty)}">${TYPES[e.ty]}</span><button class="iconbtn" id="pclose">✕</button></div>
+    <h2>${e.t}</h2><div class="sub">${fmt(e.sd,{weekday:"long",day:"numeric",month:"long",year:"numeric"})}${e.ed>e.sd?" – "+fmt(e.ed,{weekday:"long",day:"numeric",month:"long"}):""}</div></div>
+    <div class="pb">
+      <dl class="meta"><dt>Venue</dt><dd>${e.venue||"—"}</dd><dt>Organiser</dt><dd>${e.org||(nwg?"NWG":"—")}</dd>
+      ${e.dl?`<dt>Entry deadline</dt><dd>${fmt(D(e.dl.entry),{day:"numeric",month:"short",year:"numeric"})}</dd><dt>PO due by</dt><dd>${fmt(D(e.dl.po),{day:"numeric",month:"short"})} <span style="color:var(--slate-light)">(entry deadline − 28 days)</span></dd>`:""}
+      ${e.dl&&e.dl.pay?`<dt>Organiser payment</dt><dd>${fmt(D(e.dl.pay),{day:"numeric",month:"short"})}</dd>`:""}</dl>
+      ${nwg?`<div class="note">NWG-run competition. Details and pricing will live on the ${e.ty==="all"?"NWG Competitions":"Club Competitions"} page (coming soon). ${e.allSites?"All clubs attend.":"Hosted by "+Object.keys(e.sites).join(", ")+"."}</div>`:
+      `<div class="sec">Club entries (${entries.length})</div>
+      ${entries.map(([s,x])=>x?`<div class="site"><div class="top"><span class="dot ${x.health}"></span><span class="nm">${s}</span><span class="stage ${x.stage==="Awaiting sign-off"?"signoff":""}">${x.stage}</span>${x.missing?`<span class="miss">⚠ ${x.missing} missing</span>`:""}</div>
+        <div class="wait" style="margin-top:4px">${x.n!=null&&x.stage!=="Completed"?`${x.n} gymnasts · `:""}Waiting on: <b>${x.waiting}</b></div>
+        ${x.reasons.length?`<ul class="reasons">${x.reasons.map(r=>{const[c,t]=r.includes("|")?r.split("|"):["",r];return `<li class="${c}">${t}</li>`}).join("")}</ul>`:""}
+        <a class="openlink" href="#">Open ${s} entry →</a>${x.stage==="Awaiting sign-off"?` <button class="btn primary" style="margin-left:8px;padding:5px 10px;font-size:12px">Review &amp; sign off</button>`:""}</div>`:"").join("")}
+      <div class="sec">Your club</div>
+      <div class="note">Not entering yet? <a href="#" style="color:var(--orange-dark);font-weight:600">+ Start an entry for this competition</a> — creates a draft for your club; nothing is sent until you request sign-off.</div>`}
+    </div>`;
+  panel.classList.add("open");scrim.classList.add("open");pclose.onclick=close;
+}
+function close(){panel.classList.remove("open");scrim.classList.remove("open")}
+scrim.onclick=close;document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+render();
+</script>
+</body>
+</html>
