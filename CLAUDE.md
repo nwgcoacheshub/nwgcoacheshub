@@ -48,26 +48,34 @@ Two separate badges sit under the "Welcome back" heading — not a single combin
 notification bell icon (non-functional), avatar circle with initials (non-functional).
 
 **Nav row:** Home (flat link, active on dashboard) and Settings (flat link, personal
-account management) have no dropdown. Club Profile, Gymnastics, Operations, People, and
-Admin are dropdown menus — click the trigger to reveal sub-items; only one dropdown open
-at a time; closes on outside click or Escape:
-- **Club Profile** — Burnley, Coventry, Leeds, Mansfield, Rotherham, Wirral,
-  Wolverhampton, Head Office (currently inert/disabled placeholders — no per-site route
-  exists yet)
+account management) have no dropdown. Club Profile, Gymnastics, Competitions, Operations,
+People, and Admin are dropdown menus — click the trigger to reveal sub-items; only one
+dropdown open at a time; closes on outside click or Escape:
+- **Club Profile** — one live link per site the user can see, built from `rota_sites` via
+  `getSiteAccess()` (not a hardcoded list), each to `/club-profile/{slug}`.
+  `view_all_sites` holders see every site; everyone else sees only their own. Head Office
+  never appears (it has no `rota_sites` row and no Club Profile page). An empty list shows
+  a single disabled "No sites available" item.
 - **Gymnastics** — Weekly Overview (live route `/gymnastics/weekly-overview`), Programme
   Resources, Coaching Guides (the latter two currently inert/disabled placeholders — no
   sub-route exists yet)
+- **Competitions** — External Competition Entries, Club Competitions, NWG Competitions,
+  Judging Platform (all four currently inert/disabled placeholders — no sub-route exists
+  yet). No capability gate: shown to every active user.
 - **Operations** — Rota (existing `/rota` route, fully functional) and Site SOPs (stub
   route `/operations/site-sops`)
 - **People** — HR Links, My Compliance (currently inert/disabled placeholders — no
-  sub-route exists yet)
+  sub-route exists yet) and Policies (live route `/people/policies`)
 - **Admin** — only rendered (trigger + contents) if the logged-in user holds the
   `manage_users` capability (see Permissions below); contains Users (`/admin/users` —
   add / edit / deactivate / reset password)
 
-Each dropdown's parent landing page (`/club-profile`, `/gymnastics`, `/operations`,
+Each dropdown's parent landing page (`/gymnastics`, `/competitions`, `/operations`,
 `/people`, `/admin`, `/settings`) still exists as a stub route for direct navigation —
 the dropdown is just a faster path to sub-items, it doesn't replace the landing page.
+The exception is `/club-profile`, which has no page of its own: it redirects to the
+user's home site (`/club-profile/{slug}`), or shows `ClubProfileUnavailable` if the user
+has no site access.
 Must always use real session/profile data for the Admin gate — see the rule against demo
 toggles below.
 
@@ -79,7 +87,7 @@ the two badges described above (real data), greeting subline with today's date, 
 - Cell 1: eyebrow "WEEKLY OVERVIEW", heading "Handstand Alignment", body "This week's
   whole-club focus. Flat back, active shoulders, and consistent hollow-body positioning
   through conditioning and wall drills.", three chip tags ("Flat back" solid orange,
-  "Active shoulders" and "Wall drills" neutral), link "Open full overview →" (href="#")
+  "Active shoulders" and "Wall drills" neutral), link "Open full overview →" (href="/gymnastics/weekly-overview")
 - Cell 2: eyebrow "PRE-SCHOOL THEME", heading "Under the Sea 🐠", body "Current theme in
   the 9-week Tiny Tumblers & Little Flippers cycle. Songs, station ideas and apparatus
   set-ups included.", a 9-segment progress bar (3 filled solid, 1 filled as "current", 5
