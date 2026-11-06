@@ -283,6 +283,7 @@ export default function NavBar({
             }
             label="Competitions"
             items={[
+              { label: "Competition Calendar", disabled: true },
               { label: "External Competition Entries", disabled: true },
               { label: "Club Competitions", disabled: true },
               { label: "NWG Competitions", disabled: true },

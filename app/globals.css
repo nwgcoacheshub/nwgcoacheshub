@@ -19,6 +19,17 @@
   --color-status-amber: #E0A11B;
   --color-status-grey: #9AA2AB;
 
+  /* Competition Calendar event types (border/swatch + tint). NWG All reuses the
+     brand orange; its pill text uses orange-dark. */
+  --color-type-all: #F58220;
+  --color-type-all-tint: #FEF1E5;
+  --color-type-club: #B0408E;
+  --color-type-club-tint: #F8E8F3;
+  --color-type-inv: #2B7BB9;
+  --color-type-inv-tint: #E5F0F9;
+  --color-type-reg: #5146A8;
+  --color-type-reg-tint: #ECEAF8;
+
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --radius-card: 14px;

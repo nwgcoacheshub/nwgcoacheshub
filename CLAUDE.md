@@ -59,9 +59,11 @@ dropdown open at a time; closes on outside click or Escape:
 - **Gymnastics** — Weekly Overview (live route `/gymnastics/weekly-overview`), Programme
   Resources, Coaching Guides (the latter two currently inert/disabled placeholders — no
   sub-route exists yet)
-- **Competitions** — External Competition Entries, Club Competitions, NWG Competitions,
-  Judging Platform (all four currently inert/disabled placeholders — no sub-route exists
-  yet). No capability gate: shown to every active user.
+- **Competitions** — Competition Calendar, External Competition Entries, Club Competitions,
+  NWG Competitions, Judging Platform (all five currently inert/disabled placeholders;
+  Competition Calendar's page exists at `/competitions/calendar` and is switched on in
+  Phase 4a, the other four have no sub-route yet). No capability gate: shown to every
+  active user.
 - **Operations** — Rota (existing `/rota` route, fully functional) and Site SOPs (stub
   route `/operations/site-sops`)
 - **People** — HR Links, My Compliance (currently inert/disabled placeholders — no
@@ -303,6 +305,8 @@ the Competition Calendar reads.
   attach or detach their own site on external events only. `manage_comp_events` holders may
   create (still as themselves), edit and delete any event, and attach or detach any site on
   any event.
+- **Page.** `/competitions/calendar` (Season grid + List) reads these tables; it is
+  read-only in Phase 3b (no inserts, updates or deletes from the page).
 
 ### Seed row (include in the initial migration)
 Historical: this is what 0001 inserted. `role` was dropped in 0028, so it no longer runs as

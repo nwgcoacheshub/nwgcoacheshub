@@ -75,7 +75,7 @@ export function currentMonday(): string {
 // "Sept", which is the odd one out at four letters, and the abbreviations
 // aren't stable across ICU versions — so the same week could be labelled
 // differently on the server and in the browser.
-const MONTHS_SHORT = [
+export const MONTHS_SHORT = [
   "Jan",
   "Feb",
   "Mar",
