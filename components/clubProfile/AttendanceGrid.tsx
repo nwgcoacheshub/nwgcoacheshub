@@ -50,15 +50,15 @@ export default function AttendanceGrid({
             <p className="text-sm font-semibold text-ink">
               {weekGenerated
                 ? "No coaches rostered this week"
-                : "This week's rota hasn't been generated yet"}
+                : "This week's rota hasn't been created yet"}
             </p>
             <p className="mx-auto mt-1.5 max-w-md text-[13px] text-slate-light">
               {weekGenerated
                 ? "The week exists but has no roster rows yet. Attendance appears here once coaches are on it."
-                : "Attendance appears here once the week has been generated in the Rota tool."}
+                : "Attendance appears here once the week has been created in the Rota tool."}
             </p>
             <a
-              href={`/rota/${siteSlug}/week`}
+              href={`/rota/${siteSlug}`}
               className="mt-3 inline-block text-[13px] font-bold text-orange"
             >
               Open the rota →

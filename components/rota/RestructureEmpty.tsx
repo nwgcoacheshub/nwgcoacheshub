@@ -7,7 +7,7 @@ import { useGenerateRestructure } from "./useGenerateRestructure";
  * Shown when there's no rota_restructures row for this site yet.
  *
  * First-time generation isn't destructive — there's nothing to overwrite — so
- * it fires straight away with no confirmation step, same as WeeklyRotaEmpty.
+ * it fires straight away with no confirmation step.
  */
 export default function RestructureEmpty({
   siteId,

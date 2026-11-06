@@ -58,6 +58,7 @@ export default function RotaExportButton({
   roster,
   classes,
   categories,
+  label = "Export as PDF",
 }: {
   spec: RotaExportSpec;
   /** The board's coach lookup: same names and flags as on screen. */
@@ -65,6 +66,8 @@ export default function RotaExportButton({
   roster: RosterRow[];
   classes: ClassRow[];
   categories: Category[];
+  /** Button text when idle. The rota landing page says "Export week". */
+  label?: string;
 }) {
   // Non-null only while an export is in flight: this is both the "busy" flag and
   // what the off-screen layout renders from. Planning is only done on demand —
@@ -143,7 +146,7 @@ export default function RotaExportButton({
         disabled={!!plan}
         onClick={run}
       >
-        {plan ? "Exporting…" : "Export as PDF"}
+        {plan ? "Exporting…" : label}
       </button>
 
       {error && (

@@ -14,12 +14,11 @@ import type { RotaExportSpec } from "./RotaExportButton";
 import { useGenerateWeek } from "./useGenerateWeek";
 
 /**
- * A generated week. Every edit goes to rota_weekly_roster/rota_weekly_classes
+ * A created week. Every edit goes to rota_weekly_roster/rota_weekly_classes
  * via the weekly data source, so changing a week leaves the Standard Rota it
  * was copied from alone.
  *
- * Regenerating throws away those edits, so unlike first-time generation it's
- * behind a confirmation step.
+ * Regenerating throws away those edits, so it's behind a confirmation step.
  */
 export default function WeeklyRotaBoard({
   siteId,

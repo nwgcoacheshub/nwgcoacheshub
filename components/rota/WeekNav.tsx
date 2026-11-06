@@ -1,49 +1,66 @@
 import Link from "next/link";
-import { addDays, formatWeekDate, parseWeekDate } from "@/lib/rota/week";
 
 const CONTROL =
   "flex h-[30px] items-center justify-center rounded-lg border border-line bg-white px-2.5 text-[13px] font-semibold text-slate hover:text-ink";
 
+const DISABLED =
+  "flex h-[30px] items-center justify-center rounded-lg border border-line bg-background px-2.5 text-[13px] font-semibold text-slate-light";
+
 /**
- * Week paging: back a week, forward a week, or jump to the current one.
- * `monday` and `currentMonday` are both YYYY-MM-DD Mondays.
+ * Week paging between created weeks only: back to the previous created week,
+ * forward to the next, or jump to this week. The page looks the neighbours up,
+ * so ‹ and › skip weeks that were never created. Every date is a YYYY-MM-DD
+ * Monday; null means there's no such week.
  */
 export default function WeekNav({
   siteSlug,
   monday,
+  prevMonday,
+  nextMonday,
   currentMonday,
 }: {
   siteSlug: string;
   monday: string;
-  currentMonday: string;
+  prevMonday: string | null;
+  nextMonday: string | null;
+  /** This week's Monday, or null when this week hasn't been created. */
+  currentMonday: string | null;
 }) {
-  // Safe to assert: every caller has already parsed and canonicalised this.
-  const parsed = parseWeekDate(monday)!;
   const base = `/rota/${siteSlug}/week`;
-  const prev = `${base}/${formatWeekDate(addDays(parsed, -7))}`;
-  const next = `${base}/${formatWeekDate(addDays(parsed, 7))}`;
-  const isCurrent = monday === currentMonday;
 
   return (
     <div className="flex items-center gap-1.5">
-      <Link href={prev} aria-label="Previous week" className={CONTROL}>
-        ‹
-      </Link>
-      {isCurrent ? (
+      {prevMonday ? (
+        <Link href={`${base}/${prevMonday}`} aria-label="Previous week" className={CONTROL}>
+          ‹
+        </Link>
+      ) : (
+        <span aria-disabled="true" aria-label="Previous week" className={DISABLED}>
+          ‹
+        </span>
+      )}
+      {currentMonday && currentMonday !== monday ? (
+        <Link href={`${base}/${currentMonday}`} className={CONTROL}>
+          This week
+        </Link>
+      ) : (
         <span
           aria-disabled="true"
-          className="flex h-[30px] items-center rounded-lg border border-line bg-background px-2.5 text-[13px] font-semibold text-slate-light"
+          title={currentMonday ? undefined : "This week hasn't been created"}
+          className={DISABLED}
         >
-          Today
+          This week
         </span>
-      ) : (
-        <Link href={`${base}/${currentMonday}`} className={CONTROL}>
-          Today
-        </Link>
       )}
-      <Link href={next} aria-label="Next week" className={CONTROL}>
-        ›
-      </Link>
+      {nextMonday ? (
+        <Link href={`${base}/${nextMonday}`} aria-label="Next week" className={CONTROL}>
+          ›
+        </Link>
+      ) : (
+        <span aria-disabled="true" aria-label="Next week" className={DISABLED}>
+          ›
+        </span>
+      )}
     </div>
   );
 }

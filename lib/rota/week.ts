@@ -129,3 +129,33 @@ export function weekRangeLabel(monday: Date): string {
     : `${dayNum(monday)} ${monthShort(monday)} ${monday.getUTCFullYear()}`;
   return `${from} – ${dayNum(sunday)} ${monthShort(sunday)} ${sunday.getUTCFullYear()}`;
 }
+
+/**
+ * Mon–Sun range without the year, for the rota landing page's week cards:
+ * "19–25 Oct", "26 Oct – 1 Nov", "28 Dec – 3 Jan". The boards and the PDF keep
+ * weekRangeLabel, with the year.
+ */
+export function weekRangeShort(monday: Date): string {
+  const sunday = addDays(monday, 6);
+  if (monday.getUTCMonth() === sunday.getUTCMonth()) {
+    return `${dayNum(monday)}–${dayNum(sunday)} ${monthShort(sunday)}`;
+  }
+  return `${dayNum(monday)} ${monthShort(monday)} – ${dayNum(sunday)} ${monthShort(sunday)}`;
+}
+
+/** Whole weeks from `thisMonday` to `monday`; both are "YYYY-MM-DD" Mondays. */
+export function weekOffset(monday: string, thisMonday: string): number {
+  const a = parseWeekDate(monday);
+  const b = parseWeekDate(thisMonday);
+  if (!a || !b) return 0;
+  return Math.round((a.getTime() - b.getTime()) / (7 * MS_PER_DAY));
+}
+
+/** "This week", "Next week", "In 3 weeks", "Last week", "4 weeks ago". */
+export function relativeWeekLabel(offset: number): string {
+  if (offset === 0) return "This week";
+  if (offset === 1) return "Next week";
+  if (offset >= 2) return `In ${offset} weeks`;
+  if (offset === -1) return "Last week";
+  return `${-offset} weeks ago`;
+}

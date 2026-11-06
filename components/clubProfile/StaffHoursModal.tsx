@@ -34,7 +34,7 @@ export default function StaffHoursModal({
         <p className="text-sm text-slate">
           {weekGenerated
             ? "No working shifts are rostered for this week yet."
-            : "This week's rota hasn't been generated yet, so there are no hours to total."}
+            : "This week's rota hasn't been created yet, so there are no hours to total."}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line">

@@ -5,7 +5,9 @@ import { useMemo, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabaseClient";
 
 /**
- * Generate or regenerate one site's week via upsert_weekly_rota.
+ * Regenerate one site's existing week from the Standard Rota via
+ * upsert_weekly_rota. Since 0030 it only rebuilds a week that exists; weeks are
+ * created on the rota landing page.
  *
  * The RPC is called from the browser client on purpose: the function is
  * security definer and authorises on auth.uid(), so it needs the caller's own
@@ -33,6 +35,14 @@ export function useGenerateWeek(siteId: string, weekStart: string) {
       p_week_start: weekStart,
     });
     setSaving(false);
+
+    // P0002: the week was removed after this page loaded. Not an error to show:
+    // re-reading the route renders "This week hasn't been created", which
+    // explains it, and the board and its modal unmount with it.
+    if (rpcError?.code === "P0002") {
+      startTransition(() => router.refresh());
+      return false;
+    }
 
     if (rpcError) {
       setError(rpcError.message);

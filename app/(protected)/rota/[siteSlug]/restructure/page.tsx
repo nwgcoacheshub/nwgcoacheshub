@@ -4,7 +4,7 @@ import { getSiteAccess } from "@/lib/rota/siteAccess";
 import { getCapabilities, hasSiteCapability } from "@/lib/capabilities";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
-import RotaViewTabs from "@/components/rota/RotaViewTabs";
+import RotaHomeLink from "@/components/rota/RotaHomeLink";
 import RestructureBoard from "@/components/rota/RestructureBoard";
 import RestructureEmpty from "@/components/rota/RestructureEmpty";
 import {
@@ -27,7 +27,7 @@ export default async function RotaRestructurePage({
     return <RotaUnavailable access={access} title="Restructure" />;
   }
 
-  // Same check as the other two rota pages: only sites this user may view are
+  // Same check as the other rota pages: only sites this user may view are
   // in access.sites, so this covers an unknown slug and a coach reaching for
   // someone else's site alike.
   const site = access.sites.find((s) => s.slug === siteSlug);
@@ -61,8 +61,9 @@ export default async function RotaRestructurePage({
           sites={access.sites}
           currentSlug={site.slug}
           canSwitch={access.canSwitch}
+          view="restructure"
         />
-        <RotaViewTabs siteSlug={site.slug} active="restructure" />
+        <RotaHomeLink siteSlug={site.slug} />
       </div>
       <div className="text-[13px] text-slate-light">
         Home / <b className="font-bold text-orange">Rota</b>

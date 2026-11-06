@@ -12,10 +12,10 @@ import {
 } from "@/lib/rota/week";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
-import RotaViewTabs from "@/components/rota/RotaViewTabs";
+import RotaHomeLink from "@/components/rota/RotaHomeLink";
 import WeekNav from "@/components/rota/WeekNav";
 import WeeklyRotaBoard from "@/components/rota/WeeklyRotaBoard";
-import WeeklyRotaEmpty from "@/components/rota/WeeklyRotaEmpty";
+import WeekNotCreated from "@/components/rota/WeekNotCreated";
 import {
   type CatalogueItem,
   type Category,
@@ -41,7 +41,7 @@ export default async function RotaWeekPage({
   // someone else's site alike.
   const site = access.sites.find((s) => s.slug === siteSlug);
   if (!site) {
-    redirect(`/rota/${access.homeSlug}/week`);
+    redirect(`/rota/${access.homeSlug}`);
   }
 
   // A week is only ever addressed by its Monday, so anything else is bounced to
@@ -49,7 +49,7 @@ export default async function RotaWeekPage({
   // reachable at seven different addresses.
   const parsed = parseWeekDate(weekStartDate);
   if (!parsed) {
-    redirect(`/rota/${siteSlug}/week`);
+    redirect(`/rota/${siteSlug}`);
   }
   const monday = formatWeekDate(mondayOf(parsed));
   if (monday !== weekStartDate) {
@@ -65,12 +65,45 @@ export default async function RotaWeekPage({
   const canManageUsers = capabilities.caps.has("manage_users");
   const supabase = await createClient();
 
-  const { data: weekly } = await supabase
-    .from("rota_weekly_rotas")
-    .select("id, generated_at")
-    .eq("site_id", site.id)
-    .eq("week_start_date", monday)
-    .maybeSingle();
+  // The week itself, plus WeekNav's neighbours: the nearest created week either
+  // side and whether this week exists, so paging only ever lands on created
+  // weeks. At most 4 small queries, whatever the number of weeks.
+  const thisMonday = currentMonday();
+  const [{ data: weekly }, { data: prevWeek }, { data: nextWeek }, { data: thisWeek }] =
+    await Promise.all([
+      supabase
+        .from("rota_weekly_rotas")
+        .select("id, generated_at")
+        .eq("site_id", site.id)
+        .eq("week_start_date", monday)
+        .maybeSingle(),
+      supabase
+        .from("rota_weekly_rotas")
+        .select("week_start_date")
+        .eq("site_id", site.id)
+        .lt("week_start_date", monday)
+        .order("week_start_date", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("rota_weekly_rotas")
+        .select("week_start_date")
+        .eq("site_id", site.id)
+        .gt("week_start_date", monday)
+        .order("week_start_date", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      // Viewing this week already answers it, through the first query.
+      monday === thisMonday
+        ? Promise.resolve({ data: null })
+        : supabase
+            .from("rota_weekly_rotas")
+            .select("id")
+            .eq("site_id", site.id)
+            .eq("week_start_date", thisMonday)
+            .maybeSingle(),
+    ]);
+  const thisWeekExists = monday === thisMonday ? !!weekly : !!thisWeek;
 
   const head = (
     <>
@@ -84,7 +117,7 @@ export default async function RotaWeekPage({
             currentSlug={site.slug}
             canSwitch={access.canSwitch}
           />
-          <RotaViewTabs siteSlug={site.slug} active="week" />
+          <RotaHomeLink siteSlug={site.slug} />
         </div>
         <div className="text-[13px] text-slate-light">
           Home / <b className="font-bold text-orange">Rota</b>
@@ -95,7 +128,9 @@ export default async function RotaWeekPage({
         <WeekNav
           siteSlug={site.slug}
           monday={monday}
-          currentMonday={currentMonday()}
+          prevMonday={(prevWeek?.week_start_date as string | undefined) ?? null}
+          nextMonday={(nextWeek?.week_start_date as string | undefined) ?? null}
+          currentMonday={thisWeekExists ? thisMonday : null}
         />
       </div>
     </>
@@ -105,13 +140,7 @@ export default async function RotaWeekPage({
     return (
       <main className="mx-auto max-w-[1280px] p-6">
         {head}
-        <WeeklyRotaEmpty
-          siteId={site.id}
-          siteName={site.name}
-          weekStart={monday}
-          weekRange={weekRange}
-          canEdit={canEdit}
-        />
+        <WeekNotCreated siteName={site.name} siteSlug={site.slug} weekRange={weekRange} />
       </main>
     );
   }
@@ -153,7 +182,7 @@ export default async function RotaWeekPage({
     ]);
 
   // Same full-bleed, self-scrolling shell as the Standard Rota — it's the same
-  // board. The no-rota-yet branch above stays a normal boxed page: there's no
+  // board. The not-created branch above stays a normal boxed page: there's no
   // grid on it, just a card.
   return (
     <main className="fills-viewport flex min-h-0 flex-1 flex-col">
