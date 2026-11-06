@@ -13,6 +13,8 @@ import { DAY_NAMES } from "./board";
 import { isOrphan } from "./columns";
 import { flagTag, type RotaDirectory } from "./people";
 import {
+  addDays,
+  formatWeekDate,
   parseWeekDate,
   relativeWeekLabel,
   weekDayLabels,
@@ -185,4 +187,35 @@ export function needsAttention(weeks: WeekSummary[]): AttentionItem[] {
 /** Standard rota "Coaches": distinct coaches working on at least one day. */
 export function standardCoachCount(rows: { coach_id: string; status: string }[]): number {
   return new Set(rows.filter((r) => r.status === "working").map((r) => r.coach_id)).size;
+}
+
+/** create_weekly_rota accepts this week up to this many weeks ahead (0030). */
+export const ADD_WEEK_MAX_AHEAD = 16;
+
+export type AddWeekOption = {
+  /** "YYYY-MM-DD" */
+  monday: string;
+  /** "Mon 9 Nov · Next week" */
+  label: string;
+};
+
+/**
+ * Add week's "Week commencing" choices: this week up to 16 ahead, minus weeks
+ * already created. Built on the server from the London Monday, so the browser
+ * never decides what "this week" is.
+ */
+export function addWeekOptions(thisMonday: string, existing: Set<string>): AddWeekOption[] {
+  // Safe to assert: currentMonday() always returns "YYYY-MM-DD".
+  const start = parseWeekDate(thisMonday)!;
+  const options: AddWeekOption[] = [];
+  for (let i = 0; i <= ADD_WEEK_MAX_AHEAD; i++) {
+    const monday = addDays(start, i * 7);
+    const iso = formatWeekDate(monday);
+    if (existing.has(iso)) continue;
+    options.push({
+      monday: iso,
+      label: `Mon ${weekDayLabels(monday)[0]} · ${relativeWeekLabel(i)}`,
+    });
+  }
+  return options;
 }

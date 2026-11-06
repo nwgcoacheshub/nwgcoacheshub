@@ -3,17 +3,20 @@ import type { ReactNode } from "react";
 import { DAY_NAMES } from "@/lib/rota/board";
 import type { WeekSummary } from "@/lib/rota/landing";
 import RotaStatusChip from "./RotaStatusChip";
+import AddWeek, { type AddWeekProps } from "./AddWeek";
 
 /**
  * This week and every created week after it, as a row of cards. Each card is a
  * link that selects its week (?week=), so the page stays a server component.
- * `children` is the previous-weeks disclosure, shown under the row.
+ * `children` is the previous-weeks disclosure, shown under the row. `addWeek`
+ * is null for anyone without edit_rota, and then there's no Add week tile.
  */
 export default function RotaWeekStrip({
   siteSlug,
   weeks,
   selectedMonday,
   maxClasses,
+  addWeek,
   children,
 }: {
   siteSlug: string;
@@ -21,6 +24,7 @@ export default function RotaWeekStrip({
   selectedMonday: string | null;
   /** Tallest day across every card, so bars compare between weeks. */
   maxClasses: number;
+  addWeek: AddWeekProps | null;
   children?: ReactNode;
 }) {
   return (
@@ -33,7 +37,10 @@ export default function RotaWeekStrip({
       </div>
 
       {weeks.length === 0 ? (
-        <p className="text-sm text-slate">No upcoming weeks have been created.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-slate">No upcoming weeks have been created.</p>
+          {addWeek && <AddWeek variant="button" {...addWeek} />}
+        </div>
       ) : (
         <div className="grid auto-cols-[minmax(140px,1fr)] grid-flow-col gap-2.5 overflow-x-auto pb-0.5">
           {weeks.map((w) => {
@@ -85,6 +92,7 @@ export default function RotaWeekStrip({
               </Link>
             );
           })}
+          {addWeek && <AddWeek variant="tile" {...addWeek} />}
         </div>
       )}
 

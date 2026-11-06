@@ -4,16 +4,22 @@ import type { WeekSummary } from "@/lib/rota/landing";
 import { primaryButtonClass } from "@/components/formStyles";
 import RotaStatusChip from "./RotaStatusChip";
 import RotaWeekExport, { type RotaWeekExportProps } from "./RotaWeekExport";
+import DeleteWeek from "./DeleteWeek";
 
-/** The selected week: its numbers, then a row per day. Read only. */
+/**
+ * The selected week: its numbers, then a row per day. Read only, apart from
+ * Delete week for edit_rota holders (`canDelete`).
+ */
 export default function RotaWeekDetail({
   siteSlug,
   week,
   exportProps,
+  canDelete,
 }: {
   siteSlug: string;
   week: WeekSummary;
   exportProps: RotaWeekExportProps;
+  canDelete: boolean;
 }) {
   const stats = [
     { label: "Coaches working", value: week.totals.coachesWorking, warn: false },
@@ -36,6 +42,11 @@ export default function RotaWeekDetail({
           </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          {/* Keyed on the week so its confirm modal can't stay open over the
+              week selected after a delete. */}
+          {canDelete && (
+            <DeleteWeek key={week.id} weekId={week.id} siteSlug={siteSlug} range={week.range} />
+          )}
           <RotaWeekExport {...exportProps} />
           <Link
             href={`/rota/${siteSlug}/week/${week.monday}`}

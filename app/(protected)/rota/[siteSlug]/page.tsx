@@ -12,6 +12,7 @@ import {
 } from "@/lib/rota/week";
 import { makeDirectory, toRosterCandidates, toRotaPeople } from "@/lib/rota/people";
 import {
+  addWeekOptions,
   needsAttention,
   pickDefaultWeek,
   standardCoachCount,
@@ -24,6 +25,7 @@ import RotaPreviousWeeks from "@/components/rota/RotaPreviousWeeks";
 import RotaWeekDetail from "@/components/rota/RotaWeekDetail";
 import RotaHomeSidebar from "@/components/rota/RotaHomeSidebar";
 import type { Category, ClassRow, RosterRow } from "@/components/rota/RotaBoard";
+import AddWeek, { type AddWeekProps } from "@/components/rota/AddWeek";
 
 // The same roster and class columns the week board selects, so the selected
 // week's rows can go straight to Export week without another fetch. Embedded
@@ -44,7 +46,8 @@ type WeekRow = {
 
 /**
  * The rota landing page for one site: created weeks from this week on, the 8
- * most recent past ones, the selected week's detail, and side cards. Read only.
+ * most recent past ones, the selected week's detail, and side cards. Read only,
+ * apart from Add week and Delete week for edit_rota holders.
  *
  * The selected week is the ?week= search param, so every selection is a link
  * and a server render, with no client state.
@@ -203,6 +206,26 @@ export default async function RotaLandingPage({
     };
   }
 
+  // Add week, for edit_rota holders only. The options come from the London
+  // Monday computed above, never from the browser's clock. Q1 holds every
+  // created week from this one on, so it's all the exclusion list needs. Copy
+  // sources are the weeks already loaded: upcoming, then past newest first.
+  const standardClasses = standardClassesRes.count ?? 0;
+  const addWeek: AddWeekProps | null =
+    canEdit && !weeksError
+      ? {
+          siteId: site.id,
+          siteSlug: site.slug,
+          siteName: site.name,
+          options: addWeekOptions(thisMonday, new Set(currentRows.map((r) => r.week_start_date))),
+          copySources: [...currentWeeks, ...pastWeeks].map((w) => ({
+            id: w.id,
+            label: `${w.range} · ${w.label}`,
+          })),
+          standardClasses,
+        }
+      : null;
+
   return (
     <main className="mx-auto max-w-[1280px] p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
@@ -223,6 +246,11 @@ export default async function RotaLandingPage({
       ) : noWeeks ? (
         <div className="rounded-card border border-line bg-card p-5 shadow-card">
           <p className="text-sm text-slate">No weeks have been created for {site.name} yet.</p>
+          {addWeek && (
+            <div className="mt-3">
+              <AddWeek variant="button" {...addWeek} />
+            </div>
+          )}
         </div>
       ) : (
         <RotaWeekStrip
@@ -230,6 +258,7 @@ export default async function RotaLandingPage({
           weeks={currentWeeks}
           selectedMonday={selectedMonday}
           maxClasses={maxClasses}
+          addWeek={addWeek}
         >
           <RotaPreviousWeeks
             siteSlug={site.slug}
@@ -243,7 +272,12 @@ export default async function RotaLandingPage({
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div>
           {selectedWeek && exportProps && (
-            <RotaWeekDetail siteSlug={site.slug} week={selectedWeek} exportProps={exportProps} />
+            <RotaWeekDetail
+              siteSlug={site.slug}
+              week={selectedWeek}
+              exportProps={exportProps}
+              canDelete={canEdit}
+            />
           )}
         </div>
         <RotaHomeSidebar
@@ -254,7 +288,7 @@ export default async function RotaLandingPage({
             coaches: standardCoachCount(
               (standardRosterRes.data ?? []) as { coach_id: string; status: string }[]
             ),
-            classes: standardClassesRes.count ?? 0,
+            classes: standardClasses,
           }}
           rosterCount={rosterCandidates.length}
           restructureExists={!!restructureRes.data}
