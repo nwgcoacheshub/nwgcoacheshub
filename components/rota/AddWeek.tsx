@@ -29,6 +29,11 @@ export type AddWeekProps = {
   copySources: CopySource[];
   /** Classes on the Standard Rota; 0 disables "Standard rota". */
   standardClasses: number;
+  /**
+   * A week from ?add= (the all-sites grid's "Not created" cells), already
+   * checked to be one of `options`. The dialog opens on load with it chosen.
+   */
+  preselect?: string;
 };
 
 const ALL_CREATED = "All weeks up to 16 ahead have been created";
@@ -42,8 +47,19 @@ export default function AddWeek({
   variant,
   ...props
 }: AddWeekProps & { variant: "tile" | "button" }) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [open, setOpen] = useState(!!props.preselect);
   const full = props.options.length === 0;
+
+  function close() {
+    setOpen(false);
+    // Drop ?add= so a reload or Back doesn't open the dialog again.
+    if (props.preselect) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("add");
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }
 
   return (
     <>
@@ -72,7 +88,7 @@ export default function AddWeek({
         </button>
       )}
 
-      {open && <AddWeekDialog {...props} onClose={() => setOpen(false)} />}
+      {open && <AddWeekDialog {...props} onClose={close} onAdded={() => setOpen(false)} />}
     </>
   );
 }
@@ -84,8 +100,14 @@ function AddWeekDialog({
   options,
   copySources,
   standardClasses,
+  preselect,
   onClose,
-}: AddWeekProps & { onClose: () => void }) {
+  onAdded,
+}: AddWeekProps & {
+  onClose: () => void;
+  /** Closes without touching the URL: the push to ?week= replaces it. */
+  onAdded: () => void;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -95,7 +117,7 @@ function AddWeekDialog({
   const canStandard = standardClasses > 0;
   const canCopy = copySources.length > 0;
 
-  const [week, setWeek] = useState(options[0]?.monday ?? "");
+  const [week, setWeek] = useState(preselect ?? options[0]?.monday ?? "");
   const [source, setSource] = useState<"standard" | "copy">(canStandard ? "standard" : "copy");
   const [copyId, setCopyId] = useState(copySources[0]?.id ?? "");
 
@@ -148,7 +170,7 @@ function AddWeekDialog({
 
     // Select the new week. Closing first is safe: the write has landed.
     startTransition(() => router.push(`/rota/${siteSlug}?week=${weekValue}`));
-    onClose();
+    onAdded();
   }
 
   return (

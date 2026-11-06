@@ -13,10 +13,13 @@ import {
 import { makeDirectory, toRosterCandidates, toRotaPeople } from "@/lib/rota/people";
 import {
   addWeekOptions,
+  isNotSetUp,
   needsAttention,
   pickDefaultWeek,
   standardCoachCount,
   summariseWeek,
+  WEEK_SELECT,
+  type WeekRow,
 } from "@/lib/rota/landing";
 import RotaUnavailable from "@/components/rota/RotaUnavailable";
 import SiteSwitcher from "@/components/rota/SiteSwitcher";
@@ -24,25 +27,10 @@ import RotaWeekStrip from "@/components/rota/RotaWeekStrip";
 import RotaPreviousWeeks from "@/components/rota/RotaPreviousWeeks";
 import RotaWeekDetail from "@/components/rota/RotaWeekDetail";
 import RotaHomeSidebar from "@/components/rota/RotaHomeSidebar";
-import type { Category, ClassRow, RosterRow } from "@/components/rota/RotaBoard";
+import RotaFirstRun from "@/components/rota/RotaFirstRun";
+import RotaAllSitesLink from "@/components/rota/RotaAllSitesLink";
+import type { Category } from "@/components/rota/RotaBoard";
 import AddWeek, { type AddWeekProps } from "@/components/rota/AddWeek";
-
-// The same roster and class columns the week board selects, so the selected
-// week's rows can go straight to Export week without another fetch. Embedded
-// through the children's FK to rota_weekly_rotas: one query per week list
-// rather than a parent query plus two child queries, and the child rows aren't
-// subject to PostgREST's top-level max-rows cap.
-const WEEK_SELECT =
-  "id, week_start_date, " +
-  "rota_weekly_roster(id, day_of_week, coach_id, sort_order, shift_start_mins, shift_end_mins, status, is_key_holder, is_lead, is_cashing_up), " +
-  "rota_weekly_classes(id, day_of_week, coach_id, set_coach_id, class_catalogue_id, title, category_key, meta, start_mins, duration_mins)";
-
-type WeekRow = {
-  id: string;
-  week_start_date: string;
-  rota_weekly_roster: RosterRow[] | null;
-  rota_weekly_classes: ClassRow[] | null;
-};
 
 /**
  * The rota landing page for one site: created weeks from this week on, the 8
@@ -50,17 +38,21 @@ type WeekRow = {
  * apart from Add week and Delete week for edit_rota holders.
  *
  * The selected week is the ?week= search param, so every selection is a link
- * and a server render, with no client state.
+ * and a server render, with no client state. ?add= (from the all-sites grid's
+ * "Not created" cells) opens Add week with that week chosen.
+ *
+ * A site with no Standard Rota classes and no weeks gets the first-run view
+ * instead, from the same queries.
  */
 export default async function RotaLandingPage({
   params,
   searchParams,
 }: {
   params: Promise<{ siteSlug: string }>;
-  searchParams: Promise<{ week?: string | string[] }>;
+  searchParams: Promise<{ week?: string | string[]; add?: string | string[] }>;
 }) {
   const { siteSlug } = await params;
-  const { week: weekParam } = await searchParams;
+  const { week: weekParam, add: addParam } = await searchParams;
 
   const access = await getSiteAccess();
   if (!access.ok) {
@@ -89,6 +81,7 @@ export default async function RotaLandingPage({
   const capabilities = await getCapabilities();
   const canEdit = hasSiteCapability(capabilities, "edit_rota", site.id);
   const canManageUsers = capabilities.caps.has("manage_users");
+  const viewAllSites = capabilities.caps.has("view_all_sites");
   const thisMonday = currentMonday();
   const supabase = await createClient();
 
@@ -211,20 +204,52 @@ export default async function RotaLandingPage({
   // created week from this one on, so it's all the exclusion list needs. Copy
   // sources are the weeks already loaded: upcoming, then past newest first.
   const standardClasses = standardClassesRes.count ?? 0;
+  const addOptions = addWeekOptions(
+    thisMonday,
+    new Set(currentRows.map((r) => r.week_start_date))
+  );
+
+  // ?add=, for edit_rota holders only; anyone else's is ignored. Read as the
+  // Monday of its week. A week created since the grid was loaded goes to that
+  // week; one that can't be added (past, too far ahead, not a date) drops the
+  // param.
+  let preselect: string | undefined;
+  if (addParam !== undefined && canEdit && !weeksError) {
+    const parsed = typeof addParam === "string" ? parseWeekDate(addParam) : null;
+    const monday = parsed ? formatWeekDate(mondayOf(parsed)) : null;
+    if (monday && currentRows.some((r) => r.week_start_date === monday)) {
+      redirect(`/rota/${site.slug}?week=${monday}`);
+    }
+    if (monday && addOptions.some((o) => o.monday === monday)) {
+      preselect = monday;
+    } else {
+      redirect(`/rota/${site.slug}${requested ? `?week=${requested}` : ""}`);
+    }
+  }
+
   const addWeek: AddWeekProps | null =
     canEdit && !weeksError
       ? {
           siteId: site.id,
           siteSlug: site.slug,
           siteName: site.name,
-          options: addWeekOptions(thisMonday, new Set(currentRows.map((r) => r.week_start_date))),
+          options: addOptions,
           copySources: [...currentWeeks, ...pastWeeks].map((w) => ({
             id: w.id,
             label: `${w.range} · ${w.label}`,
           })),
           standardClasses,
+          preselect,
         }
       : null;
+
+  // Only when both counts are known: a failed query never reads as "Not set up".
+  // noWeeks is exact here: with no week from this one on and none of the last 8
+  // before it, the site has no weeks at all.
+  const firstRun =
+    !weeksError &&
+    !standardClassesRes.error &&
+    isNotSetUp(standardClasses > 0, !noWeeks);
 
   return (
     <main className="mx-auto max-w-[1280px] p-6">
@@ -232,13 +257,23 @@ export default async function RotaLandingPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-[26px] font-extrabold tracking-[-0.3px] text-slate-dark">Rota</h1>
           <SiteSwitcher sites={access.sites} currentSlug={site.slug} canSwitch={access.canSwitch} />
+          {viewAllSites && <RotaAllSitesLink />}
         </div>
         <div className="text-[13px] text-slate-light">
           Home / <b className="font-bold text-orange">Rota</b>
         </div>
       </div>
 
-      {weeksError ? (
+      {firstRun ? (
+        <RotaFirstRun
+          siteSlug={site.slug}
+          siteName={site.name}
+          canEdit={canEdit}
+          canManageUsers={canManageUsers}
+          rosterCount={rosterCandidates.length}
+          standardClasses={standardClasses}
+        />
+      ) : weeksError ? (
         // Without this the page would wrongly say no weeks have been created.
         <div className="rounded-lg border border-[#f3c9c4] bg-[#fdecea] px-3 py-[9px] text-[12.5px] text-[#a02a1c]">
           Couldn&apos;t load weeks: {weeksError.message}
@@ -269,32 +304,34 @@ export default async function RotaLandingPage({
         </RotaWeekStrip>
       )}
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div>
-          {selectedWeek && exportProps && (
-            <RotaWeekDetail
-              siteSlug={site.slug}
-              week={selectedWeek}
-              exportProps={exportProps}
-              canDelete={canEdit}
-            />
-          )}
+      {!firstRun && (
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div>
+            {selectedWeek && exportProps && (
+              <RotaWeekDetail
+                siteSlug={site.slug}
+                week={selectedWeek}
+                exportProps={exportProps}
+                canDelete={canEdit}
+              />
+            )}
+          </div>
+          <RotaHomeSidebar
+            siteSlug={site.slug}
+            canEdit={canEdit}
+            canManageUsers={canManageUsers}
+            standard={{
+              coaches: standardCoachCount(
+                (standardRosterRes.data ?? []) as { coach_id: string; status: string }[]
+              ),
+              classes: standardClasses,
+            }}
+            rosterCount={rosterCandidates.length}
+            restructureExists={!!restructureRes.data}
+            attention={needsAttention(currentWeeks)}
+          />
         </div>
-        <RotaHomeSidebar
-          siteSlug={site.slug}
-          canEdit={canEdit}
-          canManageUsers={canManageUsers}
-          standard={{
-            coaches: standardCoachCount(
-              (standardRosterRes.data ?? []) as { coach_id: string; status: string }[]
-            ),
-            classes: standardClasses,
-          }}
-          rosterCount={rosterCandidates.length}
-          restructureExists={!!restructureRes.data}
-          attention={needsAttention(currentWeeks)}
-        />
-      </div>
+      )}
     </main>
   );
 }

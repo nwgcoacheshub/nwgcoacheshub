@@ -11,7 +11,7 @@
 import type { ClassRow, RosterRow } from "@/components/rota/RotaBoard";
 import { DAY_NAMES } from "./board";
 import { isOrphan } from "./columns";
-import { flagTag, type RotaDirectory } from "./people";
+import { flagTag, makeDirectory, type RotaDirectory } from "./people";
 import {
   addDays,
   formatWeekDate,
@@ -23,6 +23,23 @@ import {
 } from "./week";
 
 export type WeekStatus = "ready" | "withoutCoach" | "noClasses";
+
+// The same roster and class columns the week board selects, so a landing-page
+// week's rows can go straight to Export week without another fetch. Embedded
+// through the children's FK to rota_weekly_rotas: one query per week list
+// rather than a parent query plus two child queries, and the child rows aren't
+// subject to PostgREST's top-level max-rows cap.
+export const WEEK_SELECT =
+  "id, week_start_date, " +
+  "rota_weekly_roster(id, day_of_week, coach_id, sort_order, shift_start_mins, shift_end_mins, status, is_key_holder, is_lead, is_cashing_up), " +
+  "rota_weekly_classes(id, day_of_week, coach_id, set_coach_id, class_catalogue_id, title, category_key, meta, start_mins, duration_mins)";
+
+export type WeekRow = {
+  id: string;
+  week_start_date: string;
+  rota_weekly_roster: RosterRow[] | null;
+  rota_weekly_classes: ClassRow[] | null;
+};
 
 export type DayCoach = {
   id: string;
@@ -148,6 +165,55 @@ export function summariseWeek(
     totals,
     days,
   };
+}
+
+/**
+ * A created week's status, as its landing-page card shows it, for the all-sites
+ * grid. Status doesn't depend on names, so the directory is empty.
+ */
+export function weekStatus(row: WeekRow, thisMonday: string): WeekStatus {
+  return summariseWeek(
+    { id: row.id, monday: row.week_start_date },
+    row.rota_weekly_roster ?? [],
+    row.rota_weekly_classes ?? [],
+    makeDirectory([], [], ""),
+    thisMonday
+  ).status;
+}
+
+/**
+ * "Not set up": no Standard Rota classes and no created weeks, ever. The
+ * all-sites grid says so, and the site's landing page shows the first-run view
+ * instead.
+ */
+export function isNotSetUp(hasStandardClasses: boolean, hasWeeks: boolean): boolean {
+  return !hasStandardClasses && !hasWeeks;
+}
+
+/** Columns of the all-sites grid: this week and the next 3. */
+export const GRID_WEEKS = 4;
+
+export type GridWeek = {
+  /** "YYYY-MM-DD" */
+  monday: string;
+  /** "This week", "Next week", "In 2 weeks" */
+  label: string;
+  /** "19–25 Oct" */
+  range: string;
+};
+
+/** The grid's weeks, from the London Monday computed on the server. */
+export function gridWeeks(thisMonday: string): GridWeek[] {
+  // Safe to assert: currentMonday() always returns "YYYY-MM-DD".
+  const start = parseWeekDate(thisMonday)!;
+  return Array.from({ length: GRID_WEEKS }, (_, i) => {
+    const monday = addDays(start, i * 7);
+    return {
+      monday: formatWeekDate(monday),
+      label: relativeWeekLabel(i),
+      range: weekRangeShort(monday),
+    };
+  });
 }
 
 /**

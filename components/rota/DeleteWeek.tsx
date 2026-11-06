@@ -62,7 +62,7 @@ export default function DeleteWeek({
       return;
     }
     if (!data || data.length !== 1) {
-      setError("This week was already deleted.");
+      setError("This week couldn't be deleted. It may already have been removed.");
       startTransition(() => router.refresh());
       return;
     }
