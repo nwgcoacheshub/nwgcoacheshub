@@ -194,15 +194,36 @@ export default async function ClubProfileSitePage({
     ...assignments.map((a) => a.coach_id),
   ]);
 
-  // The add-coach picker in Staff Roles lists active accounts at this site.
+  // The add-staff picker in Staff Roles lists active accounts at this site.
   // Only fetched for someone who can write an assignment here. It goes through
   // site_role_candidates() (0027) rather than selecting from profiles: profiles
   // RLS returns only the caller's own row to anyone without manage_users, so a
   // Club Head Coach would otherwise see nobody but themselves. The RPC re-checks
   // manage_club_roles at this site and returns nothing to anyone else.
-  const { data: siteAccounts } = canManageRoles
-    ? await supabase.rpc("site_role_candidates", { p_site_id: site.id })
-    : { data: [] as { id: string; full_name: string | null }[] };
+  //
+  // Full-access users (manage_users) may also add Head Office staff. They can
+  // already read every profile under RLS, so that list is a plain select on the
+  // user session, run alongside the RPC. Nobody else gets the query: a Club
+  // Head Coach's RLS would return only their own row anyway. The insert policy
+  // checks only the caller's rights at this club (0026), so no database change.
+  const canAddHeadOffice = canManageRoles && capabilities.caps.has("manage_users");
+  const [{ data: siteAccounts }, { data: headOfficeAccounts }] = await Promise.all([
+    canManageRoles
+      ? supabase.rpc("site_role_candidates", { p_site_id: site.id })
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
+    canAddHeadOffice
+      ? supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("site", "Head Office")
+          .eq("active", true)
+          .order("full_name")
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
+  ]);
+  const toAccount = (a: { id: string; full_name: string | null }) => ({
+    id: a.id,
+    name: a.full_name?.trim() || "Unnamed account",
+  });
 
   const initialUpdates: ClubUpdate[] = updates.map((u) => ({
     id: u.id,
@@ -327,10 +348,10 @@ export default async function ClubProfileSitePage({
         weekRange={weekRange}
         weekGenerated={Boolean(weekly)}
         roleGroups={roleGroups}
-        siteAccounts={((siteAccounts ?? []) as { id: string; full_name: string | null }[]).map((a) => ({
-          id: a.id,
-          name: a.full_name?.trim() || "Unnamed account",
-        }))}
+        siteAccounts={((siteAccounts ?? []) as { id: string; full_name: string | null }[]).map(
+          toAccount
+        )}
+        headOfficeAccounts={(headOfficeAccounts ?? []).map(toAccount)}
       />
     </main>
   );

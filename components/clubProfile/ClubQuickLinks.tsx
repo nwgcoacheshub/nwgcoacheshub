@@ -55,6 +55,7 @@ export default function ClubQuickLinks({
   weekGenerated,
   roleGroups,
   siteAccounts,
+  headOfficeAccounts,
 }: {
   siteId: string;
   canManageRoles: boolean;
@@ -65,6 +66,7 @@ export default function ClubQuickLinks({
   weekGenerated: boolean;
   roleGroups: RoleGroup[];
   siteAccounts: SiteAccount[];
+  headOfficeAccounts: SiteAccount[];
 }) {
   const [open, setOpen] = useState<Panel | null>(null);
 
@@ -116,6 +118,7 @@ export default function ClubQuickLinks({
           canManageRoles={canManageRoles}
           siteId={siteId}
           siteAccounts={siteAccounts}
+          headOfficeAccounts={headOfficeAccounts}
           onClose={() => setOpen(null)}
         />
       )}
