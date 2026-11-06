@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabaseClient";
 import { POLICY_MAX_FILE_BYTES } from "@/lib/policies/constants";
 import Modal from "@/components/Modal";
 import {
+  filterChipClass,
   inputClass,
   labelClass,
   primaryButtonClass,
@@ -84,11 +85,7 @@ function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-2.5 py-1 text-[12px] font-bold ${
-        active
-          ? "border-orange bg-orange-pale text-orange-dark"
-          : "border-line bg-card text-slate hover:bg-background"
-      }`}
+      className={filterChipClass(active)}
     >
       {label}
     </button>

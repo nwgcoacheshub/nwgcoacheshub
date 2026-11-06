@@ -11,15 +11,17 @@ import {
   type EventType,
   type SeasonWeek,
 } from "@/lib/competitions/calendar";
+import { filterChipClass } from "@/components/formStyles";
 import { TYPE_STYLES } from "./eventTypeStyles";
 import SeasonGrid from "./SeasonGrid";
 import CompList from "./CompList";
 import CompEventPanel from "./CompEventPanel";
 
-const chipBase =
-  "inline-flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-[3px] text-xs";
-const chipOn = "border-ink font-semibold text-ink";
-const chipOff = "border-line text-slate opacity-45";
+// The house filter chip, plus inline-flex so a type chip's swatch sits
+// centred beside its label.
+function chipClass(selected: boolean): string {
+  return `inline-flex items-center gap-1.5 ${filterChipClass(selected)}`;
+}
 
 /**
  * The calendar's client side: site and type filters, the Season grid or List,
@@ -55,6 +57,7 @@ export default function CompCalendar({
   // the current ones.
   const visibleSites = sites.filter((s) => siteFilter.has(s.id));
   const allSitesShown = visibleSites.length === sites.length;
+  const allTypesShown = EVENT_TYPES.every((t) => typeFilter.has(t));
 
   function clickSite(id: string) {
     setSiteFilter((prev) => {
@@ -72,6 +75,8 @@ export default function CompCalendar({
 
   function clickType(t: EventType) {
     setTypeFilter((prev) => {
+      // All on: a click means "just this one", as for sites.
+      if (EVENT_TYPES.every((x) => prev.has(x))) return new Set([t]);
       const next = new Set(prev);
       if (next.has(t)) {
         next.delete(t);
@@ -113,36 +118,45 @@ export default function CompCalendar({
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-[.04em] text-slate-light">
             Clubs
           </span>
+          <button
+            type="button"
+            aria-pressed={allSitesShown}
+            onClick={() => setSiteFilter(new Set(sites.map((s) => s.id)))}
+            className={chipClass(allSitesShown)}
+          >
+            All
+          </button>
           {sites.map((s) => (
             <button
               key={s.id}
               type="button"
-              aria-pressed={siteFilter.has(s.id)}
+              aria-pressed={!allSitesShown && siteFilter.has(s.id)}
               onClick={() => clickSite(s.id)}
-              className={`${chipBase} ${siteFilter.has(s.id) ? chipOn : chipOff}`}
+              className={chipClass(!allSitesShown && siteFilter.has(s.id))}
             >
               {s.name}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setSiteFilter(new Set(sites.map((s) => s.id)))}
-            className={`${chipBase} border-line text-slate`}
-          >
-            All
-          </button>
         </div>
         <div className="flex flex-wrap items-center gap-[5px]">
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-[.04em] text-slate-light">
             Type
           </span>
+          <button
+            type="button"
+            aria-pressed={allTypesShown}
+            onClick={() => setTypeFilter(new Set(EVENT_TYPES))}
+            className={chipClass(allTypesShown)}
+          >
+            All
+          </button>
           {EVENT_TYPES.map((t) => (
             <button
               key={t}
               type="button"
-              aria-pressed={typeFilter.has(t)}
+              aria-pressed={!allTypesShown && typeFilter.has(t)}
               onClick={() => clickType(t)}
-              className={`${chipBase} ${typeFilter.has(t) ? chipOn : chipOff}`}
+              className={chipClass(!allTypesShown && typeFilter.has(t))}
             >
               <span className={`inline-block h-[9px] w-[9px] rounded-[3px] ${TYPE_STYLES[t].swatch}`} />
               {EVENT_TYPE_SHORT[t]}

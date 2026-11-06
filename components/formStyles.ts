@@ -16,3 +16,12 @@ export const secondaryButtonClass =
 
 export const rowActionClass =
   "rounded-md border border-line bg-white px-2 py-1 text-xs font-semibold text-slate-dark hover:bg-background disabled:cursor-not-allowed disabled:opacity-60";
+
+// Toggle filter chip, extracted verbatim from the Policies Library tag chips so
+// other filter bars (e.g. the Competition Calendar) match them exactly. Full
+// literal strings so Tailwind sees every class.
+export function filterChipClass(selected: boolean): string {
+  return selected
+    ? "rounded-full border px-2.5 py-1 text-[12px] font-bold border-orange bg-orange-pale text-orange-dark"
+    : "rounded-full border px-2.5 py-1 text-[12px] font-bold border-line bg-card text-slate hover:bg-background";
+}
