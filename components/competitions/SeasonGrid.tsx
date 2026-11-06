@@ -124,7 +124,7 @@ export default function SeasonGrid({
             {sites.map((s) => (
               <th
                 key={s.id}
-                className="sticky top-0 z-20 truncate border-b border-line bg-background px-2 py-2 text-left font-semibold text-slate"
+                className="sticky top-0 z-20 truncate border-b border-line bg-background px-2 py-2 text-center font-semibold text-slate"
               >
                 {s.name}
               </th>
