@@ -235,6 +235,7 @@ Since migrations 0026 (database) and 0027 + P4 (app), permissions come from
 | `sign_off_competitions` | Head of Gymnastics |
 | `approve_judges` | Regional General Manager, Head of Gymnastics |
 | `confirm_comp_pricing` (site-scoped) | Club Head Coach, Head of Gymnastics (RGM and HOO hold `all_sites_scope` but not this) |
+| `remove_comp_gymnast_data` | Regional General Manager, Head of Gymnastics |
 
 Coach holds only `edit_comp_entries`. Every capability requires `active = true`. A site-scoped capability
 applies at the holder's own `profiles.site`, or at every site with `all_sites_scope`.
@@ -402,6 +403,45 @@ Errors: `42501` not allowed, `P0002` not found, `55000` wrong stage / preconditi
   still cascades to its gymnasts. 15 guard/lock/pricing triggers in all on the comp entry
   tables (14 from 0033, 1 from 0034).
 - **Judge approval resets** when a staff row's person, role or entry changes.
+
+### Competition activity log and data removal
+Since migration 0035.
+
+- **`comp_activity_log`** — one row per row change on `comp_events`, `comp_event_sites`,
+  `comp_external_details`, `comp_entries`, `comp_entry_fee_levels`, `comp_entry_extras`,
+  `comp_entry_gymnasts`, `comp_entry_gymnast_extras` and `comp_entry_staff`: `actor_id`
+  (`auth.uid()`; null = system / SQL Editor), `created_at`, `tx_id` (one request), `table_name`,
+  `op`, `row_id` / `row_key`, `entry_id`, `event_id`, `site_id`, `action`, `changes`
+  (`{"col": {"old", "new"}}`, changed columns only), `redacted` (column names), `detail`. No
+  FKs to the rows it describes, so it outlives deletes. Written only by the definer trigger
+  `comp_activity_log_write()`; clients (and `service_role`) have select only.
+- **Read.** Entry rows: own site or `view_all_sites` (on the copied `site_id`, so still after
+  a draft entry is deleted). Event-level rows (`entry_id` null): every active user.
+- **PII never enters the log as a value.** `comp_entry_gymnasts` is an allowlist (only `id`,
+  `entry_id`, `fee_level_id`, the payment columns and `withdrawn` are logged; everything else,
+  including `full_name`, `dob`, `notes`, `withdrawn_note`, is redacted). On `comp_entries`,
+  `notes`, `decline_note` and `withdrawal_note` are redacted. Only their names appear, in
+  `redacted`. A new PII column on any other comp table must be added to the logger's list.
+- **Plain-English lines.** `action` is a fixed key the logger derives from the change
+  (`request_signoff`, `sign_off`, `decline`, `confirm_pricing`, `pricing_cleared`,
+  `po_request_sent`, `record_po_number`, `correct_po_number`, `mark_entered`,
+  `mark_organiser_paid`, `undo_organiser_paid`, `complete`, `withdraw`, `undo_po_request`,
+  `undo_entered`, `status_changed`, `approve_judge`, `judge_approval_reset`,
+  `withdraw_gymnast`, `reinstate_gymnast`, `remove_gymnast_data`); null means an ordinary edit,
+  described from `table_name`, `op` and the `changes` keys. Names (people, gymnasts) are looked
+  up live from ids, never stored; group same-`tx_id` rows ("Added 9 gymnasts"). "Ready for PO"
+  is derived in the app, not logged. A decline reason is not kept after resubmission.
+- **Not logged:** no-op updates (only `updated_at` or identical values); child rows removed by
+  a cascade (the parent's delete row stands for them); the removal's per-gymnast blanking.
+- **Data removal.** `comp_entry_remove_gymnast_data(p_entry_id)`, `remove_comp_gymnast_data`
+  (RGM, HOG). Only on a completed, declined or withdrawn entry, once the event's `end_date` is
+  12 months or more before today (Europe/London), and once. Blanks `full_name`, `dob`, `notes`,
+  `withdrawn_note` on every gymnast; sets `comp_entries.notes` to null and `decline_note` /
+  `withdrawal_note` to `'[removed]'` where set; sets `data_removed_by/_at`; keeps fee levels,
+  extras and payment columns. Logs one `remove_gymnast_data` line with
+  `detail = {"gymnasts": N}`. Errors as 0033 (`42501`, `P0002`, `55000`). The app shows
+  "Gymnast 1, 2…" afterwards (`created_at` order) and computes "due for removal"
+  (`end_date` + 12 months); neither is stored.
 
 ### Seed row (include in the initial migration)
 Historical: this is what 0001 inserted. `role` was dropped in 0028, so it no longer runs as

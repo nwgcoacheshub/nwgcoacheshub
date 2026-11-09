@@ -24,7 +24,8 @@ export type Capability =
   | "edit_comp_entries"
   | "sign_off_competitions"
   | "approve_judges"
-  | "confirm_comp_pricing";
+  | "confirm_comp_pricing"
+  | "remove_comp_gymnast_data";
 
 export type Capabilities = {
   caps: ReadonlySet<Capability>;
