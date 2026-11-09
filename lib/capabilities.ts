@@ -20,7 +20,11 @@ export type Capability =
   | "manage_club_meetings"
   | "manage_club_updates"
   | "manage_club_roles"
-  | "manage_comp_events";
+  | "manage_comp_events"
+  | "edit_comp_entries"
+  | "sign_off_competitions"
+  | "approve_judges"
+  | "confirm_comp_pricing";
 
 export type Capabilities = {
   caps: ReadonlySet<Capability>;

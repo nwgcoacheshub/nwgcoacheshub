@@ -11,6 +11,13 @@ tracking, and quick links to external systems (e.g. BARS).
 **This is NOT a class registration or gymnast management system** — BARS and other
 existing tools already handle that. Do not build gymnast/class CRUD features here.
 
+**Exception — competition entry lists (approved 2026-11, migration 0032).** External
+Competition Entries may store, per entry, a gymnast's name and date of birth (no parent or
+contact data) with that gymnast's fee level, extras, notes and payment checklist. This data
+lives only in `comp_entry_gymnasts` and is removed manually 12 months after the competition.
+It is not a gymnast record: no gymnast profiles, no reuse across entries, no registration or
+class features. The rule above still applies to everything else.
+
 ## v1 scope — DO NOT EXCEED WITHOUT EXPLICIT APPROVAL
 - Static shell matching the agreed design mock (Tailwind, exact tokens below)
 - Gated by Supabase Auth
@@ -224,8 +231,12 @@ Since migrations 0026 (database) and 0027 + P4 (app), permissions come from
 | `view_all_sites`, `all_sites_scope`, `publish_whats_new`, `manage_policies`, `manage_users`, `manage_comp_events` | Regional General Manager, Head of Gymnastics, Head of Operations |
 | `edit_rota`, `manage_club_meetings`, `manage_club_updates` (site-scoped) | Lead Coach, Club Head Coach + the three above |
 | `manage_club_roles` (site-scoped) | Club Head Coach + the three above |
+| `edit_comp_entries` (site-scoped) | All six titles, Coach included |
+| `sign_off_competitions` | Head of Gymnastics |
+| `approve_judges` | Regional General Manager, Head of Gymnastics |
+| `confirm_comp_pricing` (site-scoped) | Club Head Coach, Head of Gymnastics (RGM and HOO hold `all_sites_scope` but not this) |
 
-Coach holds nothing. Every capability requires `active = true`. A site-scoped capability
+Coach holds only `edit_comp_entries`. Every capability requires `active = true`. A site-scoped capability
 applies at the holder's own `profiles.site`, or at every site with `all_sites_scope`.
 
 - **The matrix lives only in the database**, in `title_has_capability()` (0026). Never
@@ -307,6 +318,90 @@ the Competition Calendar reads.
   any event.
 - **Page.** `/competitions/calendar` (Season grid + List) reads these tables; it is
   read-only in Phase 3b (no inserts, updates or deletes from the page).
+
+### Competition entries data model
+Since migration 0032. External Competition Entries: one club entry per (external event,
+site). Status RPCs and the guard trigger are 0033 (plus the gymnast delete lock, 0034);
+the activity log and data removal are 0035. **No app code uses these tables until 0035 is
+applied**, and until 0033 the gated
+columns below are directly writable by `edit_comp_entries` holders.
+
+- **`comp_external_details`** — `event_id` PK → `comp_events` ON DELETE CASCADE;
+  `entry_deadline`, `organiser_payment_deadline` (`date`), shared by every club.
+- **`comp_entries`** — `event_id` → `comp_events` and `site_id` → `rota_sites`, both
+  RESTRICT; unique `(event_id, site_id)`, and `(event_id, site_id)` → `comp_event_sites`
+  RESTRICT (the site must be attached to the event; an event or site attachment with
+  entries can't be deleted). `status` (`draft`, `awaiting_signoff`, `collecting`,
+  `po_request_sent`, `po_received`, `entered`, `completed`, `declined`, `withdrawn`;
+  default `draft`), `uplift_pct` (0–100, default 20), `judges_required`, `notes`,
+  `po_number`, `late_notice_acknowledged`, `decline_note` (required once `declined_at` is
+  set), and who/when pairs (`*_by` → `profiles` SET NULL, `*_at`): `signoff_requested`,
+  `signed_off`, `declined`, `pricing_confirmed`, `po_requested`, `po_received`, `entered`,
+  `organiser_paid`, `completed`, `data_removed`. "Ready for PO" is not stored: the app
+  derives it (status `collecting` and every non-withdrawn gymnast has `debt_added`, `paid`
+  and `marked_paid_bars`). Parent price = `organiser_fee × (1 + uplift_pct/100)`, computed
+  in the app; extras are not uplifted.
+- **`comp_entry_fee_levels`**, **`comp_entry_extras`** — per entry (`label`, unique per
+  entry ignoring case; `organiser_fee` / `price`); cascade with the entry.
+- **`comp_entry_gymnasts`** — the only child data: `full_name`, `dob`, `notes`,
+  `withdrawn_note`. `fee_level_id` (nullable in draft) must be on the same entry (composite
+  FK, ON DELETE SET NULL (fee_level_id)). `debt_added`, `paid`, `amount_paid`,
+  `credit_used`, `paid_date`, `marked_paid_bars`, `withdrawn` (+ `withdrawn_note`,
+  required). Name and DOB are both set or both blank; data removal (0035) blanks name,
+  DOB, `notes` and `withdrawn_note`, keeps the payment columns, sets
+  `comp_entries.data_removed_at`, and none of the four is ever written to the activity log.
+- **`comp_entry_gymnast_extras`** — `(entry_id, gymnast_id, extra_id)`; both FKs share
+  `entry_id`, so the extra is on the gymnast's own entry. Insert/delete only.
+- **`comp_entry_staff`** — `profile_id` → `profiles` RESTRICT, unique per entry;
+  `staff_role` `coach` | `judge`; `transport` (`own_car`, `carpool`, `public_transport`,
+  `taxi`, info only); `judge_approved_by/_at` (judges only; null = pending; an unapproved
+  judge is removed, there is no rejected state).
+- **Access.** Read an entry and all its rows (gymnasts included): own site or
+  `view_all_sites`. Write: `edit_comp_entries` at the entry's site. Entries are inserted as
+  yourself, in `draft`, with every gated column empty, for an external event; deleted only
+  in `draft`; ordinary updates allowed at any status. A fee level or extra in use can't be
+  deleted. Gymnast insert/update needs name and DOB and an entry whose data hasn't been
+  removed. Staff are added with no judge approval. `comp_external_details`: every active
+  user reads; `edit_comp_entries` holders insert/update (external events only);
+  `manage_comp_events` deletes.
+- **Gated columns (0033).** On `comp_entries`: `status`, `late_notice_acknowledged`,
+  `decline_note`, `po_number`, every who/when pair, and `event_id` / `site_id` /
+  `created_by`. On `comp_entry_staff`: `judge_approved_by/_at`.
+- **Staff picker.** `comp_staff_candidates()` (definer) → `id, full_name, site` for every
+  active profile company-wide, Head Office included; no email, job title or active flag.
+
+### Competition entry actions
+Since migration 0033. Every stage change goes through one definer RPC (`p_entry_id uuid`
+unless shown); the gated columns can't be written directly (guard triggers raise `42501`).
+Errors: `42501` not allowed, `P0002` not found, `55000` wrong stage / precondition,
+`22023` missing input.
+
+| RPC | Who | From → to |
+|---|---|---|
+| `comp_entry_request_signoff` | `edit_comp_entries` at site | draft or declined → awaiting_signoff (needs a gymnast, every gymnast's fee level, an entry deadline) |
+| `comp_entry_sign_off(id, p_acknowledge_late)` | `sign_off_competitions` | awaiting_signoff → collecting (late = deadline − 28 days before today; must be acknowledged) |
+| `comp_entry_decline(id, p_note)` | `sign_off_competitions` | awaiting_signoff → declined |
+| `comp_entry_confirm_pricing` | `confirm_comp_pricing` at site | any open stage; no status change |
+| `comp_entry_po_request_sent` | `edit_comp_entries` at site | collecting → po_request_sent (Ready for PO + prices confirmed) |
+| `comp_entry_record_po_number(id, p_po_number)` | `edit_comp_entries` at site | po_request_sent → po_received; corrects it at po_received / entered |
+| `comp_entry_mark_entered` | `edit_comp_entries` at site | po_received → entered |
+| `comp_entry_mark_organiser_paid` | `edit_comp_entries` at site | at po_received / entered; no status change |
+| `comp_entry_complete` | `edit_comp_entries` at site | entered → completed (on/after the event's end date) |
+| `comp_entry_withdraw(id, p_reason)` | `edit_comp_entries` at site | awaiting_signoff … entered → withdrawn (final) |
+| `comp_entry_approve_judge(p_staff_id)` | `approve_judges` | sets `judge_approved_by/_at` on a judge staff row |
+| `comp_entry_undo_po_request` | `edit_comp_entries` at site | po_request_sent → collecting |
+| `comp_entry_undo_entered` | `edit_comp_entries` at site | entered → po_received |
+| `comp_entry_undo_organiser_paid` | `edit_comp_entries` at site | clears organiser paid at po_received / entered |
+
+- **Price confirmation clears itself** when a fee level or extra is added, removed or
+  repriced, or `uplift_pct` changes.
+- **Lock.** From po_request_sent onward (and at completed / withdrawn), gymnasts can't be
+  added, deleted (0034 — withdraw instead) or un-withdrawn, a non-withdrawn gymnast's fee
+  level and extras can't change, and fee levels / extras can't be added, removed or
+  repriced (`55000`). Withdrawing and payment fields stay editable. Deleting a draft entry
+  still cascades to its gymnasts. 15 guard/lock/pricing triggers in all on the comp entry
+  tables (14 from 0033, 1 from 0034).
+- **Judge approval resets** when a staff row's person, role or entry changes.
 
 ### Seed row (include in the initial migration)
 Historical: this is what 0001 inserted. `role` was dropped in 0028, so it no longer runs as
